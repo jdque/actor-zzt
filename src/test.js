@@ -48,7 +48,7 @@ board.run(function (spawn) {
     spawn('enemy')
 });*/
 
-board.setup(function (object) {
+/*board.setup(function (object) {
     object('player', function (expr, label, end, terminate, _if, _elif, _else, _endif, loop, endloop, print, jump, send, set, wait, lock, unlock, zap, restore, spawn, die, element) {
         set('$z', 2)
         jump('start')
@@ -95,7 +95,7 @@ board.setup(function (object) {
 
 board.run(function (spawn) {
     spawn('player')
-});
+});*/
 
 /*board.setup(function (object) {
     object('player', function (expr, label, end, terminate, _if, _elif, _else, _endif, loop, endloop, print, jump, send, set, wait, lock, unlock, zap, restore, spawn, die, element) {
@@ -132,7 +132,7 @@ board.run(function (spawn) {
     spawn('player')
 });*/
 
-/*board.setup(function (object) {
+board.setup(function (object) {
     object('about', function (expr, label, end, terminate, _if, _elif, _else, _endif, loop, endloop, print, jump, send, set, wait, lock, unlock, zap, restore, spawn, die, element) {
         element.set('dom_about')
         end()
@@ -167,7 +167,7 @@ board.run(function (spawn) {
                 //create image element
                 var image = document.createElement('img');
                 image.id = "dom_image";
-                image.src = "penguins.jpg";
+                image.src = "assets/penguins.jpg";
                 image.width = 320;
                 image.height = 0;
                 elem.appendChild(image);
@@ -211,4 +211,4 @@ board.run(function(spawn) {
     spawn('about')
     spawn('pictures')
     spawn('content')
-});*/
+});

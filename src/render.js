@@ -6,8 +6,6 @@ TileSprite = function () {
     PIXI.Sprite.apply(this, [PIXI.Texture.fromCanvas(this.canvas)]);
 
     this.tiles = [];
-    this.width = 0;
-    this.height = 0;
 }
 
 TileSprite.prototype = Object.create(PIXI.Sprite.prototype);
@@ -17,13 +15,13 @@ TileSprite.prototype.setTiles = function (tiles, width, height) {
     this.width = width;
     this.height = height;
 
-    var canvas = this.canvas;
-    var context = canvas.getContext('2d');
+    //var canvas = this.canvas;
+    //var context = canvas.getContext('2d');
 
-    this.canvas.width = width * 8;
-    this.canvas.height = height * 8;
-    this.canvas.style.left = this.x + "px";
-    this.canvas.style.top = this.y + "px";
+    //this.canvas.width = width * 8;
+    //this.canvas.height = height * 8;
+    this.canvas.style.left = this.position.x + "px";
+    this.canvas.style.top = this.position.y + "px";
     this.canvas.style.position = 'absolute';
     this.canvas.style.display = 'block';
 
@@ -38,7 +36,7 @@ TileSprite.prototype.setTiles = function (tiles, width, height) {
         }
     }
 
-    //this.setTexture(PIXI.Texture.fromCanvas(this.canvas));
+    this.setTexture(PIXI.Texture.fromCanvas(this.canvas));
 }
 
 var WIDTH = 640;
@@ -47,26 +45,22 @@ var stage = new PIXI.Stage(0x000000);
 var renderer = new PIXI.CanvasRenderer(WIDTH, HEIGHT);
 var TILESET = null;
 
-document.body.appendChild(renderer.view);
-
 function update() {
     window.renderer.render(stage);
 }
 
 function initialize() {
-    TILESET = document.createElement('img');
-    TILESET.src = 'tileset.bmp';
-    TILESET.style.display = "none";
-    document.body.appendChild(TILESET);
+    document.body.appendChild(renderer.view);
 
-    var what = new PIXI.Sprite(PIXI.Texture.fromCanvas(this.canvas))
+    TILESET = document.createElement('img');
+    TILESET.src = 'assets/tileset.bmp';
 
     var obj = new TileSprite();
+    obj.position.x = 32;
+    obj.position.y = 32;
     obj.setTiles(
         [1, 2, 3, 4,
          1, 2, 3, 4], 4, 2);
-    obj.x = 0;
-    obj.y = 0;
     window.stage.addChild(obj);
 
     window.setInterval(function () {
