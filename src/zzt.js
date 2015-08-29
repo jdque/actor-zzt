@@ -1,10 +1,11 @@
 Expression = function (expr, context) {
-    this.expr = expr.replace(/[$]/g, 'this.board.variables.');
-    this.context = context || window;
+    this.expr = new Function(
+        'return ' + expr.replace(/[$]/g, 'this.board.variables.')
+    ).bind(context);
 }
 
 Expression.prototype.evaluate = function () {
-    return eval.call(this.context, this.expr);
+    return this.expr();
 }
 
 Command = function (parseFunc, execFunc, scope) {
@@ -158,59 +159,34 @@ Entity.prototype.parsePreviousBlock = function () {
 }
 
 Entity.prototype.parse = function () {
-    var expr      = this.expr.bind(this);
-
-    var label     = new Command(this.label_parse, null, this);
-    var end       = new Command(this.end_parse, this.end, this);
-    var terminate = new Command(null, this.terminate, this);
-    var _if       = new Command(this._if_parse, this._if, this);
-    var _elif     = new Command(this._elif_parse, this._elif, this);
-    var _else     = new Command(this._else_parse, this._else, this);
-    var _endif    = new Command(this._endif_parse, this._endif, this);
-    var loop      = new Command(this.loop_parse, this.loop, this);
-    var endloop   = new Command(this.endloop_parse, this.endloop, this);
-    var print     = new Command(null, this.print, this);
-    var jump      = new Command(null, this.jump, this);
-    var send      = new Command(null, this.send, this);
-    var set       = new Command(null, this.set, this);
-    var wait      = new Command(this.wait_parse, this.wait, this);
-    var lock      = new Command(null, this.lock, this);
-    var unlock    = new Command(null, this.unlock, this);
-    var zap       = new Command(null, this.zap, this);
-    var restore   = new Command(null, this.restore, this);
-    var spawn     = new Command(null, this.spawn, this);
-    var die       = new Command(null, this.die, this);
-
-    var element = {};
-    element.set = (new Command(null, this.element_set, this)).parseFunc;
-    element.exec = (new Command(null, this.element_exec, this)).parseFunc;
-
-    //Default label if no label is specified
-    this.label_parse('_start');
-    
-    this.script.call(this,
-        expr,
-        label.parseFunc,
-        end.parseFunc,
-        terminate.parseFunc,
-        _if.parseFunc,
-        _elif.parseFunc,
-        _else.parseFunc,
-        _endif.parseFunc,
-        loop.parseFunc,
-        endloop.parseFunc,
-        print.parseFunc,
-        jump.parseFunc,
-        send.parseFunc,
-        set.parseFunc,
-        wait.parseFunc,
-        lock.parseFunc,
-        unlock.parseFunc,
-        zap.parseFunc,
-        restore.parseFunc,
-        spawn.parseFunc,
-        die.parseFunc,
-        element);
+    (new Function(
+        'var expr      = this.expr.bind(this);' +
+        'var label     = (new Command(this.label_parse, null, this)).parseFunc;' +
+        'var end       = (new Command(this.end_parse, this.end, this)).parseFunc;' +
+        'var terminate = (new Command(null, this.terminate, this)).parseFunc;' +
+        'var _if       = (new Command(this._if_parse, this._if, this)).parseFunc;' +
+        'var _elif     = (new Command(this._elif_parse, this._elif, this)).parseFunc;' +
+        'var _else     = (new Command(this._else_parse, this._else, this)).parseFunc;' +
+        'var _endif    = (new Command(this._endif_parse, this._endif, this)).parseFunc;' +
+        'var loop      = (new Command(this.loop_parse, this.loop, this)).parseFunc;' +
+        'var endloop   = (new Command(this.endloop_parse, this.endloop, this)).parseFunc;' +
+        'var print     = (new Command(null, this.print, this)).parseFunc;' +
+        'var jump      = (new Command(null, this.jump, this)).parseFunc;' +
+        'var send      = (new Command(null, this.send, this)).parseFunc;' +
+        'var set       = (new Command(null, this.set, this)).parseFunc;' +
+        'var wait      = (new Command(this.wait_parse, this.wait, this)).parseFunc;' +
+        'var lock      = (new Command(null, this.lock, this)).parseFunc;' +
+        'var unlock    = (new Command(null, this.unlock, this)).parseFunc;' +
+        'var zap       = (new Command(null, this.zap, this)).parseFunc;' +
+        'var restore   = (new Command(null, this.restore, this)).parseFunc;' +
+        'var spawn     = (new Command(null, this.spawn, this)).parseFunc;' +
+        'var die       = (new Command(null, this.die, this)).parseFunc;' +
+        'var element = {};' +
+        'element.set = (new Command(null, this.element_set, this)).parseFunc;' +
+        'element.exec = (new Command(null, this.element_exec, this)).parseFunc;' +
+        'this.label_parse("_start");' +
+        this.script.toString().replace("function ()", "")
+    ).bind(this))();
 
     this.parsed = true;
 }
@@ -444,8 +420,10 @@ Board = function () {
 }
 
 Board.prototype.setup = function (script) {
-    var object = this.object.bind(this);
-    script.call(this, object);
+    (new Function(
+        'var object = this.object.bind(this);' +
+        script.toString().replace('function ()', '')
+    ).bind(this))();
 
     return this;
 }
@@ -477,8 +455,10 @@ Board.prototype.spawn = function (name, parent) {
 }
 
 Board.prototype.run = function (script) {
-    var spawn = this.spawn.bind(this);
-    script.call(this, spawn);
+    (new Function(
+        'var spawn = this.spawn.bind(this); ' +
+        script.toString().replace('function ()', '')
+    ).bind(this))();
 
     var loop = function () {
         //Add spawned objects

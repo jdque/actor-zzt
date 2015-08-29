@@ -132,8 +132,8 @@ board.run(function (spawn) {
     spawn('player')
 });*/
 
-board.setup(function (object) {
-    object('about', function (expr, label, end, terminate, _if, _elif, _else, _endif, loop, endloop, print, jump, send, set, wait, lock, unlock, zap, restore, spawn, die, element) {
+board.setup(function () {
+    object('about', function () {
         element.set('dom_about')
         end()
         
@@ -142,7 +142,7 @@ board.setup(function (object) {
         end()
     });
 
-    object('pictures', function (expr, label, end, terminate, _if, _elif, _else, _endif, loop, endloop, print, jump, send, set, wait, lock, unlock, zap, restore, spawn, die, element) {
+    object('pictures', function () {
         element.set('dom_pictures')
         end()
         
@@ -151,7 +151,7 @@ board.setup(function (object) {
         end()
     });
 
-    object('content', function (expr, label, end, terminate, _if, _elif, _else, _endif, loop, endloop, print, jump, send, set, wait, lock, unlock, zap, restore, spawn, die, element) {
+    object('content', function () {
         element.set('dom_content')
         end()
         
@@ -182,7 +182,7 @@ board.setup(function (object) {
         end()
     });
 
-    object('image', function (expr, label, end, terminate, _if, _elif, _else, _endif, loop, endloop, print, jump, send, set, wait, lock, unlock, zap, restore, spawn, die, element) {
+    object('image', function () {
         element.set('dom_image')
         jump('animate')
         end()
@@ -207,7 +207,7 @@ board.setup(function (object) {
     });
 });
 
-board.run(function(spawn) {
+board.run(function () {
     spawn('about')
     spawn('pictures')
     spawn('content')
