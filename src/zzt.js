@@ -259,6 +259,7 @@ Entity.prototype.end = function () {
 }   
 
 Entity.prototype.terminate = function () {
+    this.ended = true;
     this.board.ended = true;
 }
 
@@ -336,7 +337,7 @@ Entity.prototype.endloop = function () {
 
 Entity.prototype.print = function (text) {
     var printText = (text instanceof Expression) ? text.evaluate() : text;
-    console.log(this.name + " " + this.depth + " : " + printText);
+    console.log(printText);
     this.cycleEnded = true;
 }
 
@@ -359,7 +360,6 @@ Entity.prototype.wait_parse = function (count) {
 }
 
 Entity.prototype.wait = function () {
-    console.log(this.name + " wait")
     this.cycleEnded = true;
 }
 
@@ -417,6 +417,8 @@ Board = function () {
     this.ended = false;
     this.spawnedObjs = [];
     this.deletedObjs = [];
+
+    this.terminateCallback = function () {};
 }
 
 Board.prototype.setup = function (script) {
@@ -485,13 +487,21 @@ Board.prototype.run = function (script) {
             }   
         }
 
-        if (this.ended === false)
+        if (this.ended === false) {
             window.setTimeout(loop, 100);
+        }
+        else {
+            this.terminateCallback();
+        }
     }.bind(this);
 
     window.setTimeout(loop, 100);
 
     return this;
+}
+
+Board.prototype.terminated = function (func) {
+    this.terminateCallback = func;
 }
 
 Board.prototype.send = function (objName, label) {
@@ -557,3 +567,16 @@ Board.prototype.spawn = function (name) {
 
     return obj;
 }*/
+
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+    module.exports = {
+        Expression: Expression,
+        Command: Command,
+        Block: Block,
+        IfBlock: IfBlock,
+        LoopBlock: LoopBlock,
+        LabelBlockGroup: LabelBlockGroup,
+        Entity: Entity,
+        Board: Board
+    };
+}
