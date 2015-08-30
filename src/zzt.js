@@ -86,10 +86,10 @@ LoopBlock.prototype = Object.create(Block.prototype);
 LoopBlock.prototype.reset = function () {
     Block.prototype.reset.apply(this);
     this.currentCount = 0;
+    this.execCount = this.count instanceof Expression ? this.count.evaluate() : this.count;
 }
 
 LoopBlock.prototype.iterate = function () {
-    this.execCount = this.count instanceof Expression ? this.count.evaluate() : this.count;
     if (typeof this.execCount !== 'number') {
         return false;
     }
