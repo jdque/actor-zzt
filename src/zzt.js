@@ -23,7 +23,7 @@ Command._defaultParseFunc = function (func) {
 
 Block = function () {
     this.commands = [];
-    this.index = 0;
+    this.index = -1;
 }
 
 Block.prototype.add = function (command) {
@@ -31,15 +31,15 @@ Block.prototype.add = function (command) {
 }
 
 Block.prototype.reset = function () {
-    this.index = 0;
+    this.index = -1;
 }
 
 Block.prototype.execNext = function () {
     if (this.index >= this.commands.length)
         return false;
 
-    this.commands[this.index]();
     this.index++;
+    this.commands[this.index]();
     return true;
 }
 

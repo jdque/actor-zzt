@@ -203,7 +203,7 @@ describe("Oop", function () {
 			});
 		});
 
-		/*it("should allow jumping to the current label", function (done) {
+		it("should allow jumping to the current label", function (done) {
 			board.setup(function () {
 				object('Player', function () {
 					set('$count', 1)
@@ -214,6 +214,7 @@ describe("Oop", function () {
 						_if('$count === 3')
 							terminate()
 						_endif()
+						set('$count', expr('$count + 1'))
 						jump('do')
 					end()
 				});
@@ -225,7 +226,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
-		});*/
+		});
 
 		/*it("should handle chained labels", function (done) {
 			board.setup(function () {
@@ -336,7 +337,7 @@ describe("Oop", function () {
 					print('B')
 					send('ObjectA', 'do')
 					wait(1)
-				terminate()
+					terminate()
 				});
 			});
 			board.run(function () {
