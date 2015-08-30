@@ -182,6 +182,34 @@ describe("Oop", function () {
 				done();
 			});
 		});
+
+		it("should allow nested blocks", function (done) {
+			board.setup(function () {
+				object('Player', function () {
+					set('$var', 0)
+					loop(2)
+						loop(2)
+							_if('$var % 2 === 0')
+								_if('true')
+									print('a')
+								_endif()
+							_else()
+								print('b')
+							_endif()
+							set('$var', expr('$var + 1'))
+						endloop()
+					endloop()
+					terminate()
+				});
+			});
+			board.run(function () {
+				spawn('Player')
+			});
+			board.terminated(function () {
+				expect(console.history.toString()).toEqual(['a', 'b', 'a', 'b'].toString())
+				done();
+			});
+		});
 	});
 
 	describe("Labels", function () {
