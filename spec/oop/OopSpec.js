@@ -55,23 +55,28 @@ describe("Oop", function () {
 		});
 
 		it("should fail if there are object definitions with identical names", function (done) {
-			board.setup(function () {
-				object('Player', function () {
-					print('fail')
-					terminate()
+			try {
+				board.setup(function () {
+					object('Player', function () {
+						print('fail')
+						terminate()
+					});
+					object('Player', function () {
+						print('fail')
+						terminate()
+					});
 				});
-				object('Player', function () {
-					print('fail')
-					terminate()
+				board.run(function () {
+					spawn('Player')
 				});
-			});
-			board.run(function () {
-				spawn('Player')
-			});
-			board.terminated(function () {
-				expect(console.history.toString()).not.toEqual(['fail'].toString())
+				board.terminated(function () {
+					done.fail();
+				});
+			}
+			catch (e) {
+				expect(e).toEqual("Duplicate object definition");
 				done();
-			});
+			}
 		});
 	});
 

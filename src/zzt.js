@@ -435,6 +435,9 @@ Board.prototype.setup = function (script) {
 }
 
 Board.prototype.object = function (name, script) {
+    if (this.objects[name]) {
+        throw "Duplicate object definition";
+    }
     var obj = new Entity(this, name, script);
     this.objects[name] = obj;
 
