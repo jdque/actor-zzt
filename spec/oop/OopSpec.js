@@ -159,7 +159,7 @@ describe("Oop", function () {
 			});
 		});
 
-		/*it("should not run a loop if the count expression is non-numeric", function (done) {
+		it("should not run a loop if the count expression is non-numeric", function (done) {
 			board.setup(function () {
 				object('Player', function () {
 					set('$var', 'a')
@@ -176,7 +176,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).not.toEqual(['fail'].toString())
 				done();
 			});
-		});*/
+		});
 	});
 
 	describe("Labels", function () {

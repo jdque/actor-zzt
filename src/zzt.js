@@ -90,6 +90,10 @@ LoopBlock.prototype.reset = function () {
 
 LoopBlock.prototype.iterate = function () {
     this.execCount = this.count instanceof Expression ? this.count.evaluate() : this.count;
+    if (typeof this.execCount !== 'number') {
+        return false;
+    }
+
     this.currentCount++;
     if (this.currentCount > this.execCount) {
         return false;
