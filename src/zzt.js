@@ -1,3 +1,14 @@
+Util = {};
+
+Util.extend = function (destination, source) {
+    for (var k in source) {
+        if (source.hasOwnProperty(k)) {
+            destination[k] = source[k];
+        }
+    }
+    return destination;
+}
+
 Expression = function (expr, context) {
     this.expr = new Function(
         'return ' + expr.replace(/[$]/g, 'this.board.variables.')
@@ -6,19 +17,6 @@ Expression = function (expr, context) {
 
 Expression.prototype.evaluate = function () {
     return this.expr();
-}
-
-Command = function (parseFunc, execFunc, scope) {
-    this.parseFunc = parseFunc ? parseFunc.bind(scope) : Command._defaultParseFunc.call(scope, execFunc);
-    this.execFunc = execFunc ? execFunc.bind(scope) : function () {};
-}
-
-Command._defaultParseFunc = function (func) {
-    return function () {
-        if (!this.parsed) {
-            this.currentBlock.add(Function.bind.apply(func, [this].concat(Array.prototype.slice.call(arguments))));
-        }
-    }.bind(this);
 }
 
 Block = function () {
@@ -132,67 +130,294 @@ LabelBlockGroup.prototype.enablePreviousBlock = function () {
         this.activeBlockIdx--;
 }
 
-Entity = function (board, name, script) {
-    this.board = board;
-    this.name = name;
-    this.script = script;
-    this.labels = {};
-
-    //Parsing
-    this.parsed = false;
+Parser = function (entity) {
+    this.entity = entity;
+    this.commands = {};
     this.currentBlock = null;
     this.blockStack = [];
-    
-    //Execution
-    this.ended = false;
-    this.cycleEnded = false;
-    this.locked = false;
-
-    this.executingBlock = null;
-    this.executingBlockStack = [];
 }
 
-Entity.prototype.parseNewBlock = function (block) {
+Parser.prototype.parseNewBlock = function (block) {
     this.currentBlock = block;
     this.blockStack.push(this.currentBlock);
 }
 
-Entity.prototype.parsePreviousBlock = function () {
+Parser.prototype.parsePreviousBlock = function () {
     this.blockStack.pop();
     this.currentBlock = this.blockStack[this.blockStack.length - 1];
 }
 
-Entity.prototype.parse = function () {
-    (new Function(
-        'var expr      = this.expr.bind(this);' +
-        'var label     = (new Command(this.label_parse, null, this)).parseFunc;' +
-        'var end       = (new Command(this.end_parse, this.end, this)).parseFunc;' +
-        'var terminate = (new Command(null, this.terminate, this)).parseFunc;' +
-        'var _if       = (new Command(this._if_parse, this._if, this)).parseFunc;' +
-        'var _elif     = (new Command(this._elif_parse, this._elif, this)).parseFunc;' +
-        'var _else     = (new Command(this._else_parse, this._else, this)).parseFunc;' +
-        'var _endif    = (new Command(this._endif_parse, this._endif, this)).parseFunc;' +
-        'var loop      = (new Command(this.loop_parse, this.loop, this)).parseFunc;' +
-        'var endloop   = (new Command(this.endloop_parse, this.endloop, this)).parseFunc;' +
-        'var print     = (new Command(null, this.print, this)).parseFunc;' +
-        'var jump      = (new Command(null, this.jump, this)).parseFunc;' +
-        'var send      = (new Command(null, this.send, this)).parseFunc;' +
-        'var set       = (new Command(null, this.set, this)).parseFunc;' +
-        'var wait      = (new Command(this.wait_parse, this.wait, this)).parseFunc;' +
-        'var lock      = (new Command(null, this.lock, this)).parseFunc;' +
-        'var unlock    = (new Command(null, this.unlock, this)).parseFunc;' +
-        'var zap       = (new Command(null, this.zap, this)).parseFunc;' +
-        'var restore   = (new Command(null, this.restore, this)).parseFunc;' +
-        'var spawn     = (new Command(null, this.spawn, this)).parseFunc;' +
-        'var die       = (new Command(null, this.die, this)).parseFunc;' +
-        'var element = {};' +
-        'element.set = (new Command(null, this.element_set, this)).parseFunc;' +
-        'element.exec = (new Command(null, this.element_exec, this)).parseFunc;' +
-        'this.label_parse("_start");' +
-        this.script.toString().replace("function ()", "")
-    ).bind(this))();
+Parser.prototype._defaultParseFunc = function (runCommand) {
+    return function () {
+        this.currentBlock.add(Function.bind.apply(runCommand, [this.entity].concat(Array.prototype.slice.call(arguments))));
+    }.bind(this);
+}
 
-    this.parsed = true;
+Parser.prototype.parse = function () {
+    (new Function(
+        'var expr      = this.commands.expr;' +
+        'var label     = this.commands.label;' +
+        'var end       = this.commands.end;' +
+        'var terminate = this.commands.terminate;' +
+        'var _if       = this.commands.if;' +
+        'var _elif     = this.commands.elif;' +
+        'var _else     = this.commands.else;' +
+        'var _endif    = this.commands.endif;' +
+        'var loop      = this.commands.loop;' +
+        'var endloop   = this.commands.endloop;' +
+        'var print     = this.commands.print;' +
+        'var jump      = this.commands.jump;' +
+        'var send      = this.commands.send;' +
+        'var set       = this.commands.set;' +
+        'var wait      = this.commands.wait;' +
+        'var lock      = this.commands.lock;' +
+        'var unlock    = this.commands.unlock;' +
+        'var zap       = this.commands.zap;' +
+        'var restore   = this.commands.restore;' +
+        'var spawn     = this.commands.spawn;' +
+        'var die       = this.commands.die;' +
+        'var element   = this.commands.element;' +
+        'label("_start");' +
+        this.entity.script.toString().replace("function ()", "") + ";" +
+        'end();'
+    ).bind(this))();
+}
+
+DefaultCommandSet = {};
+
+DefaultCommandSet.parseCommands = function (parser, entity) { return {
+    expr: function (expr) {
+        return new Expression(expr, entity);
+    },
+
+    label: function (name) {
+        if (!entity.labels[name])
+            entity.labels[name] = new LabelBlockGroup();
+
+        var newBlock = entity.labels[name].addBlock();
+        parser.parseNewBlock(newBlock);
+    },
+
+    end: function () {
+        if (!parser.currentBlock)
+            return;
+
+        parser.currentBlock.add(entity.commands.end.bind(entity));
+        parser.parsePreviousBlock();
+    },
+
+    if: function (condition) {
+        var block = new IfBlock();
+
+        parser.currentBlock.add(entity.runBlock.bind(entity, block));
+        parser.parseNewBlock(block);
+        parser.currentBlock.addBranch(entity.commands.if.bind(entity, new Expression(condition, entity)));
+    },
+
+    elif: function (condition) {
+        parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
+        parser.currentBlock.addBranch(entity.commands.elif.bind(entity, new Expression(condition, entity)));
+    },
+
+    else: function () {
+        parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
+        parser.currentBlock.addBranch(entity.commands.else.bind(entity));
+    },
+
+    endif: function () {
+        parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
+        parser.parsePreviousBlock();
+    },
+
+    loop: function (count) {
+        count = typeof count === 'string' ? new Expression(count, entity) : count;
+        var block = new LoopBlock(count);
+
+        parser.currentBlock.add(entity.runBlock.bind(entity, block));
+        parser.parseNewBlock(block);
+        parser.currentBlock.add(entity.commands.loop.bind(entity));
+    },
+
+    endloop: function () {
+        parser.currentBlock.add(entity.commands.endloop.bind(entity));
+        parser.parsePreviousBlock();
+    },
+
+    wait: function (count) {
+        parser.commands.loop(count);
+        parser.currentBlock.add(entity.commands.wait.bind(entity));
+        parser.commands.endloop();
+    },
+
+    terminate: parser._defaultParseFunc(entity.commands.terminate),
+    print:     parser._defaultParseFunc(entity.commands.print),
+    jump:      parser._defaultParseFunc(entity.commands.jump),
+    send:      parser._defaultParseFunc(entity.commands.send),
+    set:       parser._defaultParseFunc(entity.commands.set),
+    lock:      parser._defaultParseFunc(entity.commands.lock),
+    unlock:    parser._defaultParseFunc(entity.commands.unlock),
+    zap:       parser._defaultParseFunc(entity.commands.zap),
+    restore:   parser._defaultParseFunc(entity.commands.restore),
+    spawn:     parser._defaultParseFunc(entity.commands.spawn),
+    die:       parser._defaultParseFunc(entity.commands.die)
+}};
+
+DefaultCommandSet.runCommands = function (entity) { return {
+    end: function () {
+        entity.ended = true;
+        entity.executingBlock = null;
+        entity.executingBlockStack = [];
+    },
+
+    terminate: function () {
+        entity.ended = true;
+        entity.board.ended = true;
+    },
+
+    if: function (condition) {
+        if (!condition.evaluate()) {
+            if (!entity.executingBlock.nextCondition()) {
+                entity.runPreviousBlock();
+            }
+        }
+    },
+
+    elif: function (condition) {
+        if (!condition.evaluate()) {
+            if (!entity.executingBlock.nextCondition()) {
+                entity.runPreviousBlock();
+            }
+        }
+    },
+
+    else: function () {
+    },
+
+    endif: function () {
+        entity.runPreviousBlock();
+    },
+
+    loop: function () {
+        if (!entity.executingBlock.iterate()) {
+            entity.runPreviousBlock();
+        }
+    },
+
+    endloop: function () {
+        entity.executingBlock.restart();
+    },
+
+    print: function (text) {
+        var printText = (text instanceof Expression) ? text.evaluate() : text;
+        console.log(printText);
+        entity.cycleEnded = true;
+    },
+
+    jump: function (label) {
+        entity.gotoLabel(label);
+    },
+
+    send: function (objName, label) {
+        entity.board.send(objName, label);
+    },
+
+    set: function (varName, value) {
+        entity.board.variables[varName.replace('$', '')] = (value instanceof Expression) ? value.evaluate() : value;
+    },
+
+    wait: function () {
+        entity.cycleEnded = true;
+    },
+
+    lock: function () {
+        entity.locked = true;
+    },
+
+    unlock: function () {
+        entity.locked = false;
+    },
+
+    zap: function (label) {
+        if (entity.labels[label]) {
+            entity.labels[label].disableActiveBlock();
+        }
+    },
+
+    restore: function (label) {
+        if (entity.labels[label]) {
+            entity.labels[label].enablePreviousBlock();
+        }
+    },
+
+    spawn: function (objName) {
+        console.log(entity.name + " spawned " + objName)
+        entity.board.spawn(objName, entity);
+    },
+
+    die: function () {
+        entity.locked = true;
+        entity.ended = true;
+        entity.cycleEnded = true;
+        entity.board.deletedObjs.push(entity);
+    }
+}};
+
+DOMCommandSet = {};
+
+DOMCommandSet.parseCommands = function (parser, entity) {
+    var element = {
+        set: parser._defaultParseFunc(entity.commands.element.set),
+        exec: parser._defaultParseFunc(entity.commands.element.exec),
+    };
+
+    return {
+        element: element
+    };
+};
+
+DOMCommandSet.runCommands = function (entity) {
+    var element = {
+        set: function (id) {
+            entity.element = document.getElementById(id) || null;
+            if (entity.element)
+                entity.element.onclick = function () { entity.gotoLabel('@click') }.bind(entity);
+        },
+
+        exec: function (func) {
+            if (entity.element)
+                func(entity.element);
+        }
+    };
+
+    return {
+        element: element
+    };
+};
+
+Entity = function (board, name, script) {
+    //Properties
+    this.board = board;
+    this.name = name;
+    this.script = script;
+
+    //State
+    this.ended = false;
+    this.cycleEnded = false;
+    this.locked = false;
+
+    //Execution
+    this.labels = {};
+    this.commands = {};
+    this.executingBlock = null;
+    this.executingBlockStack = [];
+
+    //Parsing
+    this.parser = new Parser(this);
+
+    Util.extend(this.commands, DefaultCommandSet.runCommands.call(null, this));
+    Util.extend(this.parser.commands, DefaultCommandSet.parseCommands.call(null, this.parser, this));
+    Util.extend(this.commands, DOMCommandSet.runCommands.call(null, this));
+    Util.extend(this.parser.commands, DOMCommandSet.parseCommands.call(null, this.parser, this));
 }
 
 Entity.prototype.begin = function () {
@@ -237,177 +462,6 @@ Entity.prototype.execute = function () {
         if (this.cycleEnded || this.ended)
             break;
     }
-}
-
-Entity.prototype.expr = function (expr) {
-    return new Expression(expr, this);
-}
-
-Entity.prototype.label_parse = function (name) {
-    if (!this.labels[name])
-        this.labels[name] = new LabelBlockGroup();
-
-    var newBlock = this.labels[name].addBlock();
-    this.parseNewBlock(newBlock);
-}
-
-Entity.prototype.end_parse = function () {
-    this.currentBlock.add(this.end.bind(this));
-    this.parsePreviousBlock();
-}
-
-Entity.prototype.end = function () {
-    this.ended = true;
-    this.executingBlock = null;
-    this.executingBlockStack = [];
-}   
-
-Entity.prototype.terminate = function () {
-    this.ended = true;
-    this.board.ended = true;
-}
-
-Entity.prototype._if_parse = function (condition) {
-    var block = new IfBlock();
-    
-    this.currentBlock.add(this.runBlock.bind(this, block));
-    
-    this.parseNewBlock(block);
-    this.currentBlock.addBranch(this._if.bind(this, new Expression(condition, this)));
-}
-
-Entity.prototype._if = function (condition) {
-    if (!condition.evaluate()) {
-        if (!this.executingBlock.nextCondition()) {
-            this.runPreviousBlock();
-        }
-    }
-}
-
-Entity.prototype._elif_parse = function (condition) {
-    this.currentBlock.add(this.runPreviousBlock.bind(this));
-    this.currentBlock.addBranch(this._elif.bind(this, new Expression(condition, this)));
-}
-
-Entity.prototype._elif = function (condition) {
-    if (!condition.evaluate()) {
-        if (!this.executingBlock.nextCondition()) {
-            this.runPreviousBlock();
-        }
-    }
-}
-
-Entity.prototype._else_parse = function () {
-    this.currentBlock.add(this.runPreviousBlock.bind(this));
-    this.currentBlock.addBranch(this._else.bind(this));
-}
-
-Entity.prototype._else = function () {
-}
-
-Entity.prototype._endif_parse = function () {
-    this.currentBlock.add(this.runPreviousBlock.bind(this));
-    this.parsePreviousBlock();
-}
-
-Entity.prototype._endif = function () {
-    this.runPreviousBlock();
-}
-
-Entity.prototype.loop_parse = function (count) {
-    count = typeof count === 'string' ? new Expression(count, this) : count;
-    var block = new LoopBlock(count);
-    
-    this.currentBlock.add(this.runBlock.bind(this, block));
-    
-    this.parseNewBlock(block);
-    this.currentBlock.add(this.loop.bind(this));
-}
-
-Entity.prototype.loop = function () {
-    if (!this.executingBlock.iterate()) {
-        this.runPreviousBlock();
-    }
-}
-
-Entity.prototype.endloop_parse = function () {
-    this.currentBlock.add(this.endloop.bind(this));
-    this.parsePreviousBlock();
-}
-
-Entity.prototype.endloop = function () {
-    this.executingBlock.restart();
-}
-
-Entity.prototype.print = function (text) {
-    var printText = (text instanceof Expression) ? text.evaluate() : text;
-    console.log(printText);
-    this.cycleEnded = true;
-}
-
-Entity.prototype.jump = function (label) {
-    this.gotoLabel(label);
-}
-
-Entity.prototype.send = function (objName, label) {
-    this.board.send(objName, label);
-}
-
-Entity.prototype.set = function (varName, value) {
-    this.board.variables[varName.replace('$', '')] = (value instanceof Expression) ? value.evaluate() : value;
-}
-
-Entity.prototype.wait_parse = function (count) {
-    this.loop_parse(count);
-    this.currentBlock.add(this.wait.bind(this));
-    this.endloop_parse();
-}
-
-Entity.prototype.wait = function () {
-    this.cycleEnded = true;
-}
-
-Entity.prototype.lock = function () {
-    this.locked = true;
-}
-
-Entity.prototype.unlock = function () {
-    this.locked = false;
-}
-
-Entity.prototype.zap = function (label) {
-    if (this.labels[label]) {
-        this.labels[label].disableActiveBlock();
-    }
-}
-
-Entity.prototype.restore = function (label) {
-    if (this.labels[label]) {
-        this.labels[label].enablePreviousBlock();
-    }
-}
-
-Entity.prototype.spawn = function (objName) {
-    console.log(this.name + " spawned " + objName)
-    this.board.spawn(objName, this);
-}
-
-Entity.prototype.die = function () {
-    this.locked = true;
-    this.ended = true;
-    this.cycleEnded = true;
-    this.board.deletedObjs.push(this);
-}
-
-Entity.prototype.element_set = function (id) {
-    this.element = document.getElementById(id) || null;
-    if (this.element)
-        this.element.onclick = function () { this.gotoLabel('@click') }.bind(this);
-}
-
-Entity.prototype.element_exec = function (func) {
-    if (this.element)
-        func(this.element);
 }
 
 Board = function () {
@@ -455,8 +509,8 @@ Board.prototype.spawn = function (name, parent) {
 
     var obj = new Entity(this, this.source.objects[name].name, this.source.objects[name].script);
     obj.depth = parent ? parent.depth + 1 : 0;
-    obj.parse.call(obj);
-    obj.begin.call(obj);
+    obj.parser.parse();
+    obj.begin();
 
     this.spawnedObjs.push(obj);
 
@@ -526,64 +580,8 @@ Board.prototype.send = function (objName, label) {
     }
 }
 
-/*Board.prototype.run = function (script) {
-    var spawn = this.spawn.bind(this);
-    script.call(this, spawn);
-
-    var loop = function () {
-        for (var objName in this.instances) {
-            for (var i = 0; i < this.instances[objName].length; i++) {
-                this.instances[objName][i].run.call(this.instances[objName][i]);
-            }
-        }
-
-        //Execute spawned objects
-        for (var i = 0; i < this.spawnedObjs.length; i++) {
-            this.spawnedObjs[i].run.call(this.spawnedObjs[i]);
-        }
-        this.spawnedObjs = [];
-
-        //Purge dead objects
-        for (var i = 0; i < this.deletedObjs.length; i++) {
-            this.instances[this.deletedObjs[i].name].splice(this.deletedObjs, 1);
-        }
-        this.deletedObjs = [];
-
-        if (this.ended === false)
-            window.setTimeout(loop, 100);
-    }.bind(this);
-
-    window.setTimeout(loop, 100);
-
-    return this;
-}
-
-
-Board.prototype.spawn = function (name) {
-    if (!this.objects[name])
-        return;
-
-    if (!this.instances[name])
-        this.instances[name] = [];
-
-    var obj = new Entity(this, this.objects[name].name, this.objects[name].script);
-    obj.parse.call(obj);
-    obj.begin.call(obj);
-
-    this.instances[name].push(obj);
-
-    return obj;
-}*/
-
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = {
-        Expression: Expression,
-        Command: Command,
-        Block: Block,
-        IfBlock: IfBlock,
-        LoopBlock: LoopBlock,
-        LabelBlockGroup: LabelBlockGroup,
-        Entity: Entity,
         Board: Board
     };
 }
