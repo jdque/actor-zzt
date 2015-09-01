@@ -53,8 +53,8 @@ IfBlock.prototype = Object.create(Block.prototype);
 IfBlock.prototype.reset = function () {
     Block.prototype.reset.apply(this);
     this.currentCondition = 0;
-}
 
+}
 IfBlock.prototype.addBranch = function (command) {
     this.commands.push(command);
     this.conditionIdxs.push(this.commands.length - 2);
@@ -109,11 +109,8 @@ LabelBlockGroup = function () {
     this.activeBlockIdx = 0;
 }
 
-LabelBlockGroup.prototype.addBlock = function () {
-    var block = new Block();
+LabelBlockGroup.prototype.addBlock = function (block) {
     this.blocks.push(block);
-
-    return block;
 }
 
 LabelBlockGroup.prototype.getActiveBlock = function () {
@@ -191,11 +188,14 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     },
 
     label: function (name) {
-        if (!entity.labels[name])
-            entity.labels[name] = new LabelBlockGroup();
+        var block = new Block();
 
-        var newBlock = entity.labels[name].addBlock();
-        parser.parseNewBlock(newBlock);
+        if (!entity.labels[name]) {
+            entity.labels[name] = new LabelBlockGroup();
+        }
+        entity.labels[name].addBlock(block);
+
+        parser.parseNewBlock(block);
     },
 
     end: function () {
