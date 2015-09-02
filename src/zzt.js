@@ -32,6 +32,15 @@ Block.prototype.reset = function () {
     this.index = -1;
 }
 
+Block.prototype.gotoOffset = function (offset) {
+    if (offset + 1 > this.commands.length) {
+        this.index = this.commands.length - 2;
+    }
+    else {
+        this.index = offset - 1;
+    }
+}
+
 Block.prototype.execNext = function () {
     if (this.index >= this.commands.length)
         return false;
@@ -109,12 +118,19 @@ LabelBlockGroup = function () {
     this.activeBlockIdx = 0;
 }
 
-LabelBlockGroup.prototype.addBlock = function (block) {
-    this.blocks.push(block);
+LabelBlockGroup.prototype.addBlock = function (block, offset) {
+    this.blocks.push({
+        block: block,
+        offset: offset || 0
+    });
 }
 
 LabelBlockGroup.prototype.getActiveBlock = function () {
-    return this.blocks[this.activeBlockIdx];
+    return this.blocks[this.activeBlockIdx].block;
+}
+
+LabelBlockGroup.prototype.getActiveBlockOffset = function () {
+    return this.blocks[this.activeBlockIdx].offset;
 }
 
 LabelBlockGroup.prototype.disableActiveBlock = function () {
@@ -190,12 +206,14 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     label: function (name) {
         var block = new Block();
 
+        if (parser.blockStack.length === 0) {
+            parser.parseNewBlock(block);
+        }
+
         if (!entity.labels[name]) {
             entity.labels[name] = new LabelBlockGroup();
         }
-        entity.labels[name].addBlock(block);
-
-        parser.parseNewBlock(block);
+        entity.labels[name].addBlock(parser.currentBlock, parser.currentBlock.commands.length);
     },
 
     end: function () {
@@ -434,6 +452,7 @@ Entity.prototype.gotoLabel = function (name) {
         this.cycleEnded = false;
         this.executingBlock = this.labels[name].getActiveBlock();
         this.executingBlock.reset();
+        this.executingBlock.gotoOffset(this.labels[name].getActiveBlockOffset());
         this.executingBlockStack = [this.executingBlock];
     }
 }

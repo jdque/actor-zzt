@@ -261,13 +261,14 @@ describe("Oop", function () {
 			});
 		});
 
-		/*it("should handle chained labels", function (done) {
+		it("should handle chained labels", function (done) {
 			board.setup(function () {
 				object('Player', function () {
 					set('$var', 1)
 					jump('one')
 					end()
 					label('one')
+						print('a')
 					label('two')
 						_if('$var === 1')
 							print(1)
@@ -277,6 +278,7 @@ describe("Oop", function () {
 							print(2)
 							terminate()
 						_endif()
+					label('three')
 					end()
 				});
 			});
@@ -284,10 +286,38 @@ describe("Oop", function () {
 				spawn('Player')
 			});
 			board.terminated(function () {
-				expect(console.history.toString()).toEqual([1, 2].toString())
+				expect(console.history.toString()).toEqual(['a', 1, 2].toString())
 				done();
 			});
-		});*/
+		});
+
+		it("should handle chained labels with zapping", function (done) {
+			board.setup(function () {
+				object('Player', function () {
+					set('$var', 1)
+					jump('label')
+					end()
+					label('label')
+					label('label')
+					label('label')
+						print(expr('$var'))
+						set('$var', expr('$var + 1'))
+						zap('label')
+						jump('label')
+					end()
+					label('label')
+						print('done')
+					terminate()
+				});
+			});
+			board.run(function () {
+				spawn('Player')
+			});
+			board.terminated(function () {
+				expect(console.history.toString()).toEqual([1, 2, 3, 'done'].toString())
+				done();
+			});
+		});
 
 		it("should enable/disable labels with 'zap' and 'restore'", function (done) {
 			board.setup(function () {
