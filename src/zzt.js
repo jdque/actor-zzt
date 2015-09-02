@@ -9,6 +9,11 @@ Util.extend = function (destination, source) {
     return destination;
 }
 
+Util.currentId = 0;
+Util.generateId = function () {
+    return Util.currentId++;
+}
+
 Expression = function (expr, context) {
     this.expr = new Function(
         'return ' + expr.replace(/[$]/g, 'this.board.variables.')
@@ -20,8 +25,13 @@ Expression.prototype.evaluate = function () {
 }
 
 Block = function () {
+    this._id = Util.generateId().toString();
     this.commands = [];
     this.index = -1;
+}
+
+Block.prototype.id = function () {
+    return this._id;
 }
 
 Block.prototype.add = function (command) {
@@ -114,31 +124,27 @@ LoopBlock.prototype.restart = function () {
 }
 
 LabelBlockGroup = function () {
-    this.blocks = [];
+    this.blockRefs = [];
     this.activeBlockIdx = 0;
 }
 
-LabelBlockGroup.prototype.addBlock = function (block, offset) {
-    this.blocks.push({
-        block: block,
+LabelBlockGroup.prototype.addBlockRef = function (blockId, offset) {
+    this.blockRefs.push({
+        blockId: blockId,
         offset: offset || 0
     });
 }
 
-LabelBlockGroup.prototype.getActiveBlock = function () {
-    return this.blocks[this.activeBlockIdx].block;
+LabelBlockGroup.prototype.getActiveBlockRef = function () {
+    return this.blockRefs[this.activeBlockIdx];
 }
 
-LabelBlockGroup.prototype.getActiveBlockOffset = function () {
-    return this.blocks[this.activeBlockIdx].offset;
-}
-
-LabelBlockGroup.prototype.disableActiveBlock = function () {
-    if (this.activeBlockIdx < this.blocks.length - 1)
+LabelBlockGroup.prototype.disableActiveBlockRef = function () {
+    if (this.activeBlockIdx < this.blockRefs.length - 1)
         this.activeBlockIdx++;
 }
 
-LabelBlockGroup.prototype.enablePreviousBlock = function () {
+LabelBlockGroup.prototype.enablePreviousBlockRef = function () {
     if (this.activeBlockIdx > 0)
         this.activeBlockIdx--;
 }
@@ -204,16 +210,16 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     },
 
     label: function (name) {
-        var block = new Block();
 
         if (parser.blockStack.length === 0) {
+            var block = entity.createBlock();
             parser.parseNewBlock(block);
         }
 
         if (!entity.labels[name]) {
             entity.labels[name] = new LabelBlockGroup();
         }
-        entity.labels[name].addBlock(parser.currentBlock, parser.currentBlock.commands.length);
+        entity.labels[name].addBlockRef(parser.currentBlock.id(), parser.currentBlock.commands.length);
     },
 
     end: function () {
@@ -357,13 +363,13 @@ DefaultCommandSet.runCommands = function (entity) { return {
 
     zap: function (label) {
         if (entity.labels[label]) {
-            entity.labels[label].disableActiveBlock();
+            entity.labels[label].disableActiveBlockRef();
         }
     },
 
     restore: function (label) {
         if (entity.labels[label]) {
-            entity.labels[label].enablePreviousBlock();
+            entity.labels[label].enablePreviousBlockRef();
         }
     },
 
@@ -425,6 +431,7 @@ Entity = function (board, name, script) {
 
     //Execution
     this.labels = {};
+    this.blocks = [];
     this.commands = {};
     this.executingBlock = null;
     this.executingBlockStack = [];
@@ -450,11 +457,23 @@ Entity.prototype.gotoLabel = function (name) {
     if (this.labels[name]) {
         this.ended = false;
         this.cycleEnded = false;
-        this.executingBlock = this.labels[name].getActiveBlock();
+        var blockRef = this.labels[name].getActiveBlockRef();
+        this.executingBlock = this.getBlock(blockRef.blockId); 
         this.executingBlock.reset();
-        this.executingBlock.gotoOffset(this.labels[name].getActiveBlockOffset());
+        this.executingBlock.gotoOffset(blockRef.offset);
         this.executingBlockStack = [this.executingBlock];
     }
+}
+
+Entity.prototype.createBlock = function () {
+    var block = new Block();
+    this.blocks[block.id()] = block;
+
+    return block;
+}
+
+Entity.prototype.getBlock = function (id) {
+    return this.blocks[id];
 }
 
 Entity.prototype.runBlock = function (block) {
