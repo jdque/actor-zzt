@@ -341,8 +341,8 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.gotoLabel(label);
     },
 
-    send: function (objName, label) {
-        entity.board.send(objName, label);
+    send: function (scope, label) {
+        entity.board.send(scope, label, entity);
     },
 
     set: function (varName, value) {
@@ -374,7 +374,6 @@ DefaultCommandSet.runCommands = function (entity) { return {
     },
 
     spawn: function (objName) {
-        console.log(entity.name + " spawned " + objName)
         entity.board.spawn(objName, entity);
     },
 
@@ -423,6 +422,8 @@ Entity = function (board, name, script) {
     this.board = board;
     this.name = name;
     this.script = script;
+    this.depth = 0;
+    this.parent = null;
 
     //State
     this.ended = false;
@@ -547,6 +548,7 @@ Board.prototype.spawn = function (name, parent) {
 
     var obj = new Entity(this, this.source.objects[name].name, this.source.objects[name].script);
     obj.depth = parent ? parent.depth + 1 : 0;
+    obj.parent = parent || this;
     obj.parser.parse();
     obj.begin();
 
@@ -603,7 +605,9 @@ Board.prototype.terminated = function (func) {
     this.terminateCallback = func;
 }
 
-Board.prototype.send = function (objName, label) {
+Board.prototype.send = function (scope, label, obj) {
+    var objName = scope;
+
     for (var i = this.instances.length - 1; i >= 0; i--) {
         if (this.instances[i][objName]) {
             for (var j = 0; j < this.instances[i][objName].length; j++) {
