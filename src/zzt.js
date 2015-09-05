@@ -31,11 +31,12 @@ Expression.prototype.evaluate = function () {
 }
 
 Scope = function (scope, labelName) {
-    var self   = "[obj].forEach(function (obj) {\n"
-    var all    = "children(obj).forEach(function (obj) {\n"
-    var name   = "children(obj).filter(function (obj) { return obj.name === '{name}'}).forEach(function (obj) {\n"
-    var parent = "[parent(obj)].forEach(function (obj) {\n"
-    var label  = "obj.gotoLabel('{label}');\n"
+    var self   = "[obj].forEach(function (obj) {\n";
+    var all    = "children(obj).forEach(function (obj) {\n";
+    var name   = "children(obj).filter(function (obj) { return obj.name === '{name}'}).forEach(function (obj) {\n";
+    var parent = "[parent(obj)].forEach(function (obj) {\n";
+    var board  = "[board(obj)].forEach(function (obj) {\n";
+    var label  = "obj.gotoLabel('{label}');\n";
 
     var funcParts = [];
     var scopeParts = scope.split('.');
@@ -56,6 +57,10 @@ Scope = function (scope, labelName) {
             case '[parent]':
                 funcParts.push(parent);
                 break;
+            case '$':
+            case '[board]':
+                funcParts.push(board);
+                break;
             default:
                 if (idx === 0) {
                     funcParts.push(parent);
@@ -70,7 +75,7 @@ Scope = function (scope, labelName) {
         funcStr += "})\n";
     }
 
-    this.scopeFunc = new Function('obj, children, parent', funcStr);
+    this.scopeFunc = new Function('obj, children, parent, board', funcStr);
 }
 
 Scope.prototype.children = function (entity) {
@@ -98,8 +103,12 @@ Scope.prototype.parent = function (entity) {
     return entity.parent;
 }
 
+Scope.prototype.board = function (entity) {
+    return entity.board.getEntity();
+}
+
 Scope.prototype.execute = function (entity) {
-    this.scopeFunc(entity, this.children, this.parent);
+    this.scopeFunc(entity, this.children, this.parent, this.board);
 }
 
 Block = function () {
@@ -673,6 +682,10 @@ Board.prototype.runEntityTree = function () {
     }.bind(this);
 
     window.setTimeout(loop, 1);
+}
+
+Board.prototype.getEntity = function () {
+    return this.boardEntity;
 }
 
 Board.prototype.defineObject = function (name, script) {

@@ -548,15 +548,15 @@ describe("Oop", function () {
 				});
 				object('BA', function () {
 					wait(1)
-					send('<.<.*.AA.<', 'A_do')		//All board entities that have AA as a child
+					send('$.*.AA.<', 'A_do')		//All board entities that have AA as a child
 					wait(1)
-					send('<.<.<.<.<.*', 'B_do')	//Board's parent should scope to itself
+					send('<.<.<.<.<.*', 'B_do')		//Board's parent should scope to itself
 					wait(1)
 					send('<.BA.<.<.B', 'B_do')		//Self-scoping
 					wait(1)
 					send('<.<.A.*', 'AA_do')		//Send to all instances for a name scope
 					wait(1)
-					send('<.<.A.AB.ABA', 'ABA_do') //Chained name scopes
+					send('<.<.A.AB.ABA', 'ABA_do')	//Chained name scopes
 					wait(1)
 					terminate()
 				});
