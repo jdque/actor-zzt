@@ -37,29 +37,36 @@ Scope = function (scope, labelName) {
     var parent = "[parent(obj)].forEach(function (obj) {\n"
     var label  = "obj.gotoLabel('{label}');\n"
 
-    var funcStr = "";
-    var parts = scope.split('.');
-    parts.forEach(function (part) {
+    var funcParts = [];
+    var scopeParts = scope.split('.');
+    scopeParts.forEach(function (part, idx) {
         switch (part) {
             case '':
             case '[self]':
-                funcStr += self;
-            break;
+                funcParts.push(self);
+                break;
             case '*':
             case "[all]":
-                funcStr += all;
-            break;
+                if (idx === 0) {
+                    funcParts.push(parent);
+                }
+                funcParts.push(all);
+                break;
             case '<':
             case '[parent]':
-                funcStr += parent;
-            break;
+                funcParts.push(parent);
+                break;
             default:
-                funcStr += name.replace('{name}', part);
-            break;
+                if (idx === 0) {
+                    funcParts.push(parent);
+                }
+                funcParts.push(name.replace('{name}', part));
+                break;
         }
     });
-    funcStr += label.replace('{label}', labelName);
-    for (var i = 0; i < parts.length; i++) {
+    funcParts.push(label.replace('{label}', labelName));
+    var funcStr = funcParts.join("");
+    for (var i = 0; i < funcParts.length - 1; i++) {
         funcStr += "})\n";
     }
 
@@ -591,7 +598,6 @@ Board = function () {
     this.deletedObjs = [];
 
     this.terminated = false;
-
 }
 
 Board.prototype.setup = function (func) {
