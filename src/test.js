@@ -212,3 +212,5 @@ board.run(function () {
     spawn('pictures')
     spawn('content')
 });
+
+board.execute();
