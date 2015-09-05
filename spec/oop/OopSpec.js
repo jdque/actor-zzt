@@ -30,7 +30,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['Hello world'].toString())
 				done();
 			});
@@ -48,7 +48,7 @@ describe("Oop", function () {
 				spawn('Player')
 				spawn('Dummy2')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['Hello world'].toString())
 				done();
 			});
@@ -69,7 +69,7 @@ describe("Oop", function () {
 				board.run(function () {
 					spawn('Player')
 				});
-				board.terminated(function () {
+				board.finish(function () {
 					done.fail();
 				});
 			}
@@ -100,7 +100,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['a', 1, 2, true, 1.5].toString())
 				done();
 			});
@@ -138,7 +138,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
@@ -158,7 +158,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual([3, 2, 1].toString())
 				done();
 			});
@@ -177,7 +177,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).not.toEqual(['fail'].toString())
 				done();
 			});
@@ -205,7 +205,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['a', 'b', 'a', 'b'].toString())
 				done();
 			});
@@ -230,7 +230,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual([1, 2].toString())
 				done();
 			});
@@ -255,7 +255,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
@@ -285,7 +285,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['a', 1, 2].toString())
 				done();
 			});
@@ -313,7 +313,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual([1, 2, 3, 'done'].toString())
 				done();
 			});
@@ -345,7 +345,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
@@ -380,7 +380,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
@@ -408,7 +408,7 @@ describe("Oop", function () {
 				spawn('ObjectA')
 				spawn('ObjectB')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['B', 'A', 'A'].toString())
 				done();
 			});
@@ -439,7 +439,7 @@ describe("Oop", function () {
 				spawn('ObjectA')
 				spawn('ObjectB')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['B', 'A', 'B2'].toString())
 				done();
 			});
@@ -479,7 +479,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Parent')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['A', 'B'].toString())
 				done();
 			});
@@ -548,7 +548,7 @@ describe("Oop", function () {
 				spawn('A')
 				spawn('B')
 			});
-			board.terminated(function () {
+			board.finish(function () {
 				expect(console.history.toString()).toEqual(['A', 'B', 'B', 'AA', 'AA', 'ABA'].toString())
 				done();
 			});
