@@ -1,18 +1,24 @@
-Util = {};
+Util = (function () {
+    var currentId = 0;
 
-Util.extend = function (destination, source) {
-    for (var k in source) {
-        if (source.hasOwnProperty(k)) {
-            destination[k] = source[k];
-        }
+    function generateId() {
+        return currentId++;
     }
-    return destination;
-}
 
-Util.currentId = 0;
-Util.generateId = function () {
-    return Util.currentId++;
-}
+    function extend(destination, source) {
+        for (var k in source) {
+            if (source.hasOwnProperty(k)) {
+                destination[k] = source[k];
+            }
+        }
+        return destination;
+    }
+
+    return {
+        generateId: generateId,
+        extend: extend
+    };
+})();
 
 Expression = function (expr, context) {
     this.expr = new Function(
