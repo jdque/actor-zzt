@@ -34,6 +34,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['Hello world'].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should ignore trying to spawn a non-existent object", function (done) {
@@ -52,6 +53,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['Hello world'].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should fail if there are object definitions with identical names", function (done) {
@@ -72,6 +74,7 @@ describe("Oop", function () {
 				board.finish(function () {
 					done.fail();
 				});
+				board.execute();
 			}
 			catch (e) {
 				expect(e).toEqual("Duplicate object definition");
@@ -104,6 +107,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['a', 1, 2, true, 1.5].toString())
 				done();
 			});
+			board.execute();
 		});
 	});
 
@@ -142,6 +146,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should loop a block a fixed number of times", function (done) {
@@ -162,6 +167,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([3, 2, 1].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should not run a loop if the count expression is non-numeric", function (done) {
@@ -181,6 +187,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).not.toEqual(['fail'].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should allow nested blocks", function (done) {
@@ -209,6 +216,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['a', 'b', 'a', 'b'].toString())
 				done();
 			});
+			board.execute();
 		});
 	});
 
@@ -234,6 +242,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should allow jumping to the current label", function (done) {
@@ -259,6 +268,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should handle chained labels", function (done) {
@@ -289,6 +299,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['a', 1, 2].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should handle chained labels with zapping", function (done) {
@@ -317,6 +328,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3, 'done'].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should enable/disable labels with 'zap' and 'restore'", function (done) {
@@ -349,6 +361,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		/*it("should ignore non-existent labels", function (done) {
@@ -384,6 +397,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
+			board.execute();
 		});*/
 	});
 
@@ -412,6 +426,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['B', 'A', 'A'].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should ignore messages if an object is locked", function (done) {
@@ -443,6 +458,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['B', 'A', 'B2'].toString())
 				done();
 			});
+			board.execute();
 		});
 	});
 
@@ -483,6 +499,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['A', 'B'].toString())
 				done();
 			});
+			board.execute();
 		});
 
 		it("should resolve complex scopes to 0..N entities", function (done) {
@@ -552,6 +569,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['A', 'B', 'B', 'AA', 'AA', 'ABA'].toString())
 				done();
 			});
+			board.execute();
 		});
 	});
 });

@@ -578,10 +578,13 @@ Entity.prototype.execute = function () {
 
 Board = function () {
     //Setup
-    this.boardEntity = null;
+    this.setupFunc = function () {};
+    this.finishFunc = function () {};
+    this.runScript = function () {};
     this.objects = {};
 
     //Execution
+    this.boardEntity = null;
     this.instances = [{}];
     this.variables = {};
     this.spawnedObjs = [];
@@ -589,50 +592,32 @@ Board = function () {
 
     this.terminated = false;
 
-    this.terminateCallback = function () {};
 }
 
-Board.prototype.setup = function (script) {
-    (new Function(
-        'var object = this.defineObject.bind(this);' +
-        script.toString().replace("function ()", "")
-    ).bind(this))();
-
+Board.prototype.setup = function (func) {
+    this.setupFunc = func;
     return this;
 }
 
-Board.prototype.defineObject = function (name, script) {
-    if (this.objects[name]) {
-        throw "Duplicate object definition";
-    }
-    var obj = new Entity(this, name, script);
-    this.objects[name] = obj;
-
-    return obj;
-}
-
-Board.prototype.spawnObject = function (name, parent) {
-    if (!this.objects[name])
-        return;
-
-    if (parent) {
-        if (this.instances.length <= parent.depth + 1)
-            this.instances.push({});
-    }
-
-    var obj = new Entity(this, this.objects[name].name, this.objects[name].script);
-    obj.depth = parent ? parent.depth + 1 : 0;
-    obj.parent = parent || obj;
-    obj.parser.parse();
-    obj.begin();
-
-    this.spawnedObjs.push(obj);
-
-    return obj;
-}
-
 Board.prototype.run = function (script) {
-    this.boardEntity = new Entity(this, "_board", script);
+    this.runScript = script;
+    return this;
+}
+
+Board.prototype.finish = function (func) {
+    this.finishFunc = func;
+    return this;
+}
+
+Board.prototype.execute = function () {
+    //Run setup
+    (new Function(
+        'var object = this.defineObject.bind(this);' +
+        this.setupFunc.toString().replace("function ()", "")
+    ).bind(this))();
+
+    //Run root entity script
+    this.boardEntity = new Entity(this, "_board", this.runScript);
     this.boardEntity.depth = 0;
     this.boardEntity.parent = this.boardEntity;
     this.boardEntity.parser.parse();
@@ -643,9 +628,8 @@ Board.prototype.run = function (script) {
         this.boardEntity.execute();
     }
 
+    //Begin execution loop
     this.runEntityTree();
-
-    return this;
 }
 
 Board.prototype.runEntityTree = function () {
@@ -678,20 +662,47 @@ Board.prototype.runEntityTree = function () {
             window.setTimeout(loop, 1);
         }
         else {
-            this.terminateCallback();
+            this.finishFunc();
         }
     }.bind(this);
 
     window.setTimeout(loop, 1);
 }
 
+Board.prototype.defineObject = function (name, script) {
+    if (this.objects[name]) {
+        throw "Duplicate object definition";
+    }
+    var obj = new Entity(this, name, script);
+    this.objects[name] = obj;
+
+    return obj;
+}
+
+Board.prototype.spawnObject = function (name, parent) {
+    if (!this.objects[name])
+        return;
+
+    if (parent) {
+        if (this.instances.length <= parent.depth + 1)
+            this.instances.push({});
+    }
+
+    var obj = new Entity(this, this.objects[name].name, this.objects[name].script);
+    obj.depth = parent ? parent.depth + 1 : 0;
+    obj.parent = parent || obj;
+    obj.parser.parse();
+    obj.begin();
+
+    this.spawnedObjs.push(obj);
+
+    return obj;
+}
+
 Board.prototype.terminate = function () {
     this.terminated = true;
 }
 
-Board.prototype.finish = function (func) {
-    this.terminateCallback = func;
-}
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = {
