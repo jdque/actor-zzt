@@ -588,10 +588,13 @@ Entity.prototype.execute = function () {
     if (this.ended)
         return;
 
-    while (this.executingBlock.execNext()) {
+    this.executingBlock.execNext();
+
+    //TODO add consecutive execution as an option
+    /*while (this.executingBlock.execNext()) {
         if (this.cycleEnded || this.ended)
             break;
-    }
+    }*/
 }
 
 Board = function () {
@@ -670,20 +673,20 @@ Board.prototype.runEntityTree = function () {
         for (var i = this.instances.length - 1; i >= 0; i--) {
             for (var objName in this.instances[i]) {
                 for (var j = 0; j < this.instances[i][objName].length; j++) {
-                    this.instances[i][objName][j].execute.call(this.instances[i][objName][j]);
+                    this.instances[i][objName][j].execute();
                 }
             }
         }
 
         if (this.terminated === false) {
-            window.setTimeout(loop, 1);
+            loop();
         }
         else {
             this.finishFunc();
         }
     }.bind(this);
 
-    window.setTimeout(loop, 1);
+    loop();
 }
 
 Board.prototype.getEntity = function () {

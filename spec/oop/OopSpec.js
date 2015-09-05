@@ -379,7 +379,6 @@ describe("Oop", function () {
 						jump('restore')
 					end()
 					label('restore')
-						wait(1)
 						_if('$stop === true')
 							print(3)
 							terminate()
@@ -413,7 +412,6 @@ describe("Oop", function () {
 				object('ObjectB', function () {
 					print('B')
 					send('ObjectA', 'do')
-					wait(1)
 					terminate()
 				});
 			});
@@ -446,7 +444,6 @@ describe("Oop", function () {
 					label('do2')
 						print('B2')
 						send('[self].[parent].ObjectA', 'do')
-						wait(1)
 					terminate()
 				});
 			});
@@ -549,15 +546,10 @@ describe("Oop", function () {
 				object('BA', function () {
 					wait(1)
 					send('$.*.AA.<', 'A_do')		//All board entities that have AA as a child
-					wait(1)
 					send('<.<.<.<.<.*', 'B_do')		//Board's parent should scope to itself
-					wait(1)
 					send('<.BA.<.<.B', 'B_do')		//Self-scoping
-					wait(1)
 					send('<.<.A.*', 'AA_do')		//Send to all instances for a name scope
-					wait(1)
 					send('<.<.A.AB.ABA', 'ABA_do')	//Chained name scopes
-					wait(1)
 					terminate()
 				});
 			});
