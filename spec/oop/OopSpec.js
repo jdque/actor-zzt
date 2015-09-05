@@ -364,7 +364,7 @@ describe("Oop", function () {
 			board.execute();
 		});
 
-		/*it("should ignore non-existent labels", function (done) {
+		it("should ignore non-existent labels", function (done) {
 			board.setup(function () {
 				object('Player', function () {
 					set('$stop', false)
@@ -398,7 +398,7 @@ describe("Oop", function () {
 				done();
 			});
 			board.execute();
-		});*/
+		});
 	});
 
 	describe("Object-object messaging", function () {

@@ -227,7 +227,7 @@ LabelBlockGroup.prototype.getActiveBlockRef = function () {
 }
 
 LabelBlockGroup.prototype.disableActiveBlockRef = function () {
-    if (this.activeBlockIdx < this.blockRefs.length - 1)
+    if (this.activeBlockIdx < this.blockRefs.length)
         this.activeBlockIdx++;
 }
 
@@ -541,18 +541,20 @@ Entity.prototype.begin = function () {
 }
 
 Entity.prototype.gotoLabel = function (name) {
-    if (this.locked)
+    if (this.locked || !this.labels[name])
         return;
 
-    if (this.labels[name]) {
-        this.ended = false;
-        this.cycleEnded = false;
-        var blockRef = this.labels[name].getActiveBlockRef();
-        this.executingBlock = this.getBlock(blockRef.blockId); 
-        this.executingBlock.reset();
-        this.executingBlock.gotoOffset(blockRef.offset);
-        this.executingBlockStack = [this.executingBlock];
-    }
+    if (!this.labels[name].getActiveBlockRef())
+        return;
+
+    var blockRef = this.labels[name].getActiveBlockRef();
+    this.executingBlock = this.getBlock(blockRef.blockId); 
+    this.executingBlock.reset();
+    this.executingBlock.gotoOffset(blockRef.offset);
+    this.executingBlockStack = [this.executingBlock];
+
+    this.ended = false;
+    this.cycleEnded = false;
 }
 
 Entity.prototype.createBlock = function () {
