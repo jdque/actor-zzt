@@ -347,10 +347,13 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         parser.commands.endloop();
     },
 
+    send: function (scopeStr, label) {
+        parser.currentBlock.add(entity.commands.send.bind(entity, new Scope(scopeStr, label)));
+    },
+
     terminate: parser._defaultParseFunc(entity.commands.terminate),
     print:     parser._defaultParseFunc(entity.commands.print),
     jump:      parser._defaultParseFunc(entity.commands.jump),
-    send:      parser._defaultParseFunc(entity.commands.send),
     set:       parser._defaultParseFunc(entity.commands.set),
     lock:      parser._defaultParseFunc(entity.commands.lock),
     unlock:    parser._defaultParseFunc(entity.commands.unlock),
@@ -415,8 +418,8 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.gotoLabel(label);
     },
 
-    send: function (scope, label) {
-        entity.board.send(scope, label, entity);
+    send: function (scope) {
+        scope.execute(entity);
     },
 
     set: function (varName, value) {
@@ -677,11 +680,6 @@ Board.prototype.run = function (script) {
 
 Board.prototype.terminated = function (func) {
     this.terminateCallback = func;
-}
-
-Board.prototype.send = function (scope, label, rootEntity) {
-    var scopeObj = new Scope(scope, label);
-    scopeObj.execute(rootEntity);
 }
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
