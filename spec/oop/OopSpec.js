@@ -398,7 +398,7 @@ describe("Oop", function () {
 				});
 				object('ObjectB', function () {
 					print('B')
-					send('ObjectA', 'do')
+					send('[self].[parent].ObjectA', 'do')
 					wait(1)
 					terminate()
 				});
@@ -421,16 +421,16 @@ describe("Oop", function () {
 					label('do')
 						print('A')
 						lock()
-						send('ObjectB', 'do2')
+						send('[self].[parent].ObjectB', 'do2')
 					end()
 				});
 				object('ObjectB', function () {
 					print('B')
-					send('ObjectA', 'do')
+					send('[self].[parent].ObjectA', 'do')
 					end()
 					label('do2')
 						print('B2')
-						send('ObjectA', 'do')
+						send('[self].[parent].ObjectA', 'do')
 						wait(1)
 					terminate()
 				});
@@ -446,7 +446,112 @@ describe("Oop", function () {
 		});
 	});
 
-	describe("Execution order", function () {
+	describe("Entity tree", function () {
+		it("should spawn nested (child) entities", function (done) {
+			board.setup(function () {
+				object('Parent', function () {
+					spawn('Child')
+					send('[self].Child', 'do')
+					end()
+					label('done')
+						print('B')
+					terminate()
+				});
+				object('Child', function () {
+					end()
+					label('do')
+						spawn('Zygote')
+						send('[self].Zygote', 'do2')
+					end()
+				});
+				object('Zygote', function () {
+					end()
+					label('do2')
+						spawn('Zygote')
+						send('[self].Zygote', 'do3')
+					end()
+					label('do3')
+						print('A')
+						send('[self].[parent].[parent].[parent]', 'done')
+					end()
+				});
+			});
+			board.run(function () {
+				spawn('Parent')
+			});
+			board.terminated(function () {
+				expect(console.history.toString()).toEqual(['A', 'B'].toString())
+				done();
+			});
+		});
 
+		it("should resolve complex scopes to 0..N entities", function (done) {
+			board.setup(function () {
+				//A
+				//  AA
+				//  AA
+				//  AB
+				//    ABB
+				//B
+				//  BA
+				object('A', function () {
+					spawn('AA')
+					spawn('AA')
+					spawn('AB')
+					end()
+					label('A_do')
+						print('A')
+					end()
+				});
+				object('AA', function () {
+					end()
+					label('AA_do')
+						print('AA')
+					end()
+				});
+				object('AB', function () {
+					spawn('ABA')
+					end()
+					label('AB_do')
+						print('AB')
+					end()
+				});
+				object('ABA', function () {
+					end()
+					label('ABA_do')
+						print('ABA')
+					end()
+				});
+				object('B', function () {
+					spawn('BA')
+					end()
+					label('B_do')
+						print('B')
+					end()
+				});
+				object('BA', function () {
+					wait(1)
+					send('.<.<.*.AA.<', 'A_do')		//All board entities that have AA as a child
+					wait(1)
+					send('.<.<.<.<.<.*', 'B_do')	//Board's parent should scope to itself
+					wait(1)
+					send('.<.BA.<.<.B', 'B_do')		//Self-scoping
+					wait(1)
+					send('.<.<.A.*', 'AA_do')		//Send to all instances for a name scope
+					wait(1)
+					send('.<.<.A.AB.ABA', 'ABA_do') //Chained name scopes
+					wait(1)
+					terminate()
+				});
+			});
+			board.run(function () {
+				spawn('A')
+				spawn('B')
+			});
+			board.terminated(function () {
+				expect(console.history.toString()).toEqual(['A', 'B', 'B', 'AA', 'AA', 'ABA'].toString())
+				done();
+			});
+		});
 	});
 });

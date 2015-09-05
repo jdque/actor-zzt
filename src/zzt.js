@@ -24,6 +24,80 @@ Expression.prototype.evaluate = function () {
     return this.expr();
 }
 
+Scope = function (scope, labelName) {
+    var self   = "[obj].forEach(function (obj) {\n"
+    var all    = "children(obj).forEach(function (obj) {\n"
+    var name   = "children(obj).filter(function (obj) { return obj.name === '{name}'}).forEach(function (obj) {\n"
+    var parent = "[parent(obj)].forEach(function (obj) {\n"
+    var label  = "obj.gotoLabel('{label}');\n"
+
+    var funcStr = "";
+    var parts = scope.split('.');
+    parts.forEach(function (part) {
+        switch (part) {
+            case '':
+            case '[self]':
+                funcStr += self;
+            break;
+            case '*':
+            case "[all]":
+                funcStr += all;
+            break;
+            case '<':
+            case '[parent]':
+                funcStr += parent;
+            break;
+            default:
+                funcStr += name.replace('{name}', part);
+            break;
+        }
+    });
+    funcStr += label.replace('{label}', labelName);
+    for (var i = 0; i < parts.length; i++) {
+        funcStr += "})\n";
+    }
+
+    this.scopeFunc = new Function('obj, children, parent', funcStr);
+}
+
+Scope.prototype.children = function (entity) {
+    var children = [];
+    if (entity instanceof Board) {
+        for (name in entity.instances[0]) {
+            children = children.concat(entity.instances[0][name]);
+        }
+    }
+    else {
+        if (entity.depth + 1 >= entity.board.instances.length)
+            return [];
+
+        for (name in entity.board.instances[entity.depth + 1]) {
+            children = children.concat(entity.board.instances[entity.depth + 1][name].filter(function (child) {
+                return child.parent === entity;
+            }));
+        }
+
+        for (var i = 0; i < entity.board.spawnedObjs.length; i++) {
+            if (entity.board.spawnedObjs[i].parent === entity) {
+                children.push(entity.board.spawnedObjs[i]);
+            }
+        }
+    }
+
+    return children;
+}
+
+Scope.prototype.parent = function (entity) {
+    if (entity instanceof Board) {
+        return entity;
+    }
+    return entity.parent;
+}
+
+Scope.prototype.execute = function (entity) {
+    this.scopeFunc(entity, this.children, this.parent);
+}
+
 Block = function () {
     this._id = Util.generateId().toString();
     this.commands = [];
@@ -585,18 +659,18 @@ Board.prototype.run = function (script) {
                 for (var j = 0; j < this.instances[i][objName].length; j++) {
                     this.instances[i][objName][j].execute.call(this.instances[i][objName][j]);
                 }
-            }   
+            }
         }
 
         if (this.ended === false) {
-            window.setTimeout(loop, 100);
+            window.setTimeout(loop, 1);
         }
         else {
             this.terminateCallback();
         }
     }.bind(this);
 
-    window.setTimeout(loop, 100);
+    window.setTimeout(loop, 1);
 
     return this;
 }
@@ -605,21 +679,9 @@ Board.prototype.terminated = function (func) {
     this.terminateCallback = func;
 }
 
-Board.prototype.send = function (scope, label, obj) {
-    var objName = scope;
-
-    for (var i = this.instances.length - 1; i >= 0; i--) {
-        if (this.instances[i][objName]) {
-            for (var j = 0; j < this.instances[i][objName].length; j++) {
-                this.instances[i][objName][j].gotoLabel.call(this.instances[i][objName][j], label);
-            }
-        }
-    }
-
-    for (var i = 0; i < this.spawnedObjs.length; i++) {
-        if (this.spawnedObjs[i].name === objName)
-            this.spawnedObjs[i].gotoLabel.call(this.spawnedObjs[i], label);
-    }
+Board.prototype.send = function (scope, label, rootEntity) {
+    var scopeObj = new Scope(scope, label);
+    scopeObj.execute(rootEntity);
 }
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
