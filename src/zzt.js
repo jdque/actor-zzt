@@ -20,10 +20,10 @@ Util = (function () {
     };
 })();
 
-Expression = function (expr, context) {
+Expression = function (expr, entity) {
     this.expr = new Function(
-        'return ' + expr.replace(/[$]/g, 'this.board.variables.')
-    ).bind(context);
+        'return ' + expr.replace(/[$]/g, 'this.variables.')
+    ).bind(entity);
 }
 
 Expression.prototype.evaluate = function () {
@@ -435,7 +435,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
     },
 
     set: function (varName, value) {
-        entity.board.variables[varName.replace('$', '')] = (value instanceof Expression) ? value.evaluate() : value;
+        entity.variables[varName.replace('$', '')] = (value instanceof Expression) ? value.evaluate() : value;
     },
 
     wait: function () {
@@ -515,6 +515,7 @@ Entity = function (board, name, script) {
     this.parent = null;
 
     //State
+    this.variables = {};
     this.ended = false;
     this.cycleEnded = false;
     this.locked = false;
@@ -607,7 +608,6 @@ Board = function () {
     //Execution
     this.boardEntity = null;
     this.instances = [{}];
-    this.variables = {};
     this.spawnedObjs = [];
     this.deletedObjs = [];
 
