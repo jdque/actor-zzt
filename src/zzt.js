@@ -79,24 +79,7 @@ Scope = function (scope, labelName) {
 }
 
 Scope.prototype.children = function (entity) {
-    if (entity.depth + 1 >= entity.board.instances.length)
-        return [];
-
-    var children = [];
-
-    for (name in entity.board.instances[entity.depth + 1]) {
-        children = children.concat(entity.board.instances[entity.depth + 1][name].filter(function (child) {
-            return child.parent === entity;
-        }));
-    }
-
-    for (var i = 0; i < entity.board.spawnedObjs.length; i++) {
-        if (entity.board.spawnedObjs[i].parent === entity) {
-            children.push(entity.board.spawnedObjs[i]);
-        }
-    }
-
-    return children;
+    return entity.board.getChildObjects(entity);
 }
 
 Scope.prototype.parent = function (entity) {
@@ -282,6 +265,7 @@ Parser.prototype.parse = function () {
         'var restore   = this.commands.restore;' +
         'var spawn     = this.commands.spawn;' +
         'var die       = this.commands.die;' +
+        'var become    = this.commands.become;' +
         'var element   = this.commands.element;' +
         'label("_start");' +
         this.entity.script.toString().replace("function ()", "") + ";" +
@@ -372,7 +356,8 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     zap:       parser._defaultParseFunc(entity.commands.zap),
     restore:   parser._defaultParseFunc(entity.commands.restore),
     spawn:     parser._defaultParseFunc(entity.commands.spawn),
-    die:       parser._defaultParseFunc(entity.commands.die)
+    die:       parser._defaultParseFunc(entity.commands.die),
+    become:    parser._defaultParseFunc(entity.commands.become)
 }};
 
 DefaultCommandSet.runCommands = function (entity) { return {
@@ -470,7 +455,11 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.locked = true;
         entity.ended = true;
         entity.cycleEnded = true;
-        entity.board.deletedObjs.push(entity);
+        entity.board.removeObject(entity);
+    },
+
+    become: function (name) {
+        entity.board.replaceObject(entity, name);
     }
 }};
 
@@ -721,6 +710,42 @@ Board.prototype.spawnObject = function (name, parent) {
     this.spawnedObjs.push(obj);
 
     return obj;
+}
+
+Board.prototype.removeObject = function (entity) {
+    this.deletedObjs.push(entity);
+}
+
+Board.prototype.replaceObject = function (target, newName) {
+    var newObject = this.spawnObject(this.objects[newName].name, target.parent);
+
+    var children = this.getChildObjects(target);
+    for (var i = 0; i < children.length; i++) {
+        children[i].parent = newObject;
+    }
+
+    this.removeObject(target);
+}
+
+Board.prototype.getChildObjects = function (entity) {
+    if (entity.depth + 1 >= this.instances.length)
+        return [];
+
+    var children = [];
+
+    for (name in this.instances[entity.depth + 1]) {
+        children = children.concat(this.instances[entity.depth + 1][name].filter(function (child) {
+            return child.parent === entity;
+        }));
+    }
+
+    for (var i = 0; i < this.spawnedObjs.length; i++) {
+        if (this.spawnedObjs[i].parent === entity) {
+            children.push(this.spawnedObjs[i]);
+        }
+    }
+
+    return children;
 }
 
 Board.prototype.terminate = function () {

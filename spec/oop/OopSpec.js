@@ -499,6 +499,39 @@ describe("Oop", function () {
 			board.execute();
 		});
 
+		it("should morph an entity into a new instance of another", function (done) {
+			board.setup(function () {
+				object('Human', function () {
+					spawn('Child')
+					end()
+					label('morph')
+						print(1)
+						become('Warewolf')
+					end()
+				});
+				object('Warewolf', function () {
+					end()
+					label('howl')
+						print(2)
+					terminate()
+				});
+				object('Child', function () {
+					send('[parent]', 'morph')
+					wait(1)
+					send('[parent]', 'howl')
+				});
+			});
+			board.run(function () {
+				spawn('Human')
+				spawn('Bystander')
+			});
+			board.finish(function () {
+				expect(console.history.toString()).toEqual([1, 2].toString())
+				done();
+			});
+			board.execute();
+		});
+
 		it("should resolve complex scopes to 0..N entities", function (done) {
 			board.setup(function () {
 				//A
