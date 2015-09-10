@@ -1,6 +1,8 @@
 TileSprite = function (name, tiles, width, height) {
     PIXI.Sprite.apply(this, [textureCache.fetch(name, tiles, width, height)]);
-    this.tiles = [];
+    this.tiles = tiles;
+    this.tileWidth = width;
+    this.tileHeight = height;
 }
 
 TileSprite.prototype = Object.create(PIXI.Sprite.prototype);
@@ -11,15 +13,6 @@ TileSprite.prototype.draw = function () {
     //    this.position.x, this.position.y, this.realWidth, this.realHeight);
     //this.setTiles(this.tiles, this.tileWidth, this.tileHeight);
 }
-
-var WIDTH = 640;
-var HEIGHT = 480;
-var stage = new PIXI.Stage(0x000000);
-var renderer = new PIXI.CanvasRenderer(WIDTH, HEIGHT);
-var TILESET = null;
-var cacheCanvas = null;
-var textureCache = null;
-var objTexture = null;
 
 function TextureCache(baseTexture) {
     this.baseTexture = baseTexture;
@@ -37,12 +30,6 @@ TextureCache.prototype.fetch = function (name, tiles, width, height) {
 }
 
 TextureCache.prototype.setTiles = function (tiles, x, y, width, height) {
-    /*this.tiles = tiles;
-    this.tileWidth = width;
-    this.tileHeight = height;
-    this.realWidth = width * 8;
-    this.realHeight = height * 8;*/
-
     var context = cacheCanvas.getContext('2d');
     for (var i = 0; i < height; i++) {
         for (var j = 0; j < width; j++) {
@@ -56,6 +43,14 @@ TextureCache.prototype.setTiles = function (tiles, x, y, width, height) {
         }
     }
 }
+
+var WIDTH = 640;
+var HEIGHT = 480;
+var stage = new PIXI.Stage(0x000000);
+var renderer = new PIXI.CanvasRenderer(WIDTH, HEIGHT);
+var TILESET = null;
+var cacheCanvas = null;
+var textureCache = null;
 
 function update() {
     window.board.runEntityTree();
@@ -81,15 +76,27 @@ function initialize() {
 
         var baseTexture = PIXI.Texture.fromCanvas(cacheCanvas);
         textureCache = new TextureCache(baseTexture);
-        //objTexture = new PIXI.Texture(baseTexture, new PIXI.Rectangle(0, 0, 8*3, 8*2));
+
+        window.sprites = {
+            player: {
+                tiles: [219, 219,
+                        219, 219],
+                width: 2,
+                height: 2
+            },
+            enemy: {
+                tiles: [219, 219, 219,
+                        219, 219, 219,
+                        219, 219, 219],
+                width: 3,
+                height: 3
+            }
+        }
 
         window.board = new Board();
         board.setup(function () {
             object('Player', function () {
-                pixi.set(
-                    [219, 219,
-                     219, 219],
-                    2, 2,
+                pixi.set(sprites.player.tiles, sprites.player.width, sprites.player.height,
                     Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8)
                 pixi.color(0x0000FF)
                 jump('move')
@@ -112,11 +119,7 @@ function initialize() {
             });
 
             object('Enemy', function () {
-                pixi.set(
-                    [219, 219, 219,
-                     219, 219, 219,
-                     219, 219, 219],
-                    3, 3,
+                pixi.set(sprites.enemy.tiles, sprites.enemy.width, sprites.enemy.height,
                     Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8)
                 pixi.color(0xFF0000)
                 jump('move')
