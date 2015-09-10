@@ -266,7 +266,9 @@ Parser.prototype.parse = function () {
         'var spawn     = this.commands.spawn;' +
         'var die       = this.commands.die;' +
         'var become    = this.commands.become;' +
+        'var exec      = this.commands.exec;' +
         'var element   = this.commands.element;' +
+        'var pixi      = this.commands.pixi;' +
         'label("_start");' +
         this.entity.script.toString().replace("function ()", "") + ";" +
         'end();'
@@ -357,7 +359,8 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     restore:   parser._defaultParseFunc(entity.commands.restore),
     spawn:     parser._defaultParseFunc(entity.commands.spawn),
     die:       parser._defaultParseFunc(entity.commands.die),
-    become:    parser._defaultParseFunc(entity.commands.become)
+    become:    parser._defaultParseFunc(entity.commands.become),
+    exec:      parser._defaultParseFunc(entity.commands.exec)
 }};
 
 DefaultCommandSet.runCommands = function (entity) { return {
@@ -460,6 +463,10 @@ DefaultCommandSet.runCommands = function (entity) { return {
 
     become: function (name) {
         entity.board.replaceObject(entity, name);
+    },
+
+    exec: function (func) {
+        func(entity);
     }
 }};
 
@@ -495,6 +502,51 @@ DOMCommandSet.runCommands = function (entity) {
     };
 };
 
+PIXICommandSet = {};
+
+PIXICommandSet.parseCommands = function (parser, entity) {
+    var pixi = {
+        set: parser._defaultParseFunc(entity.commands.pixi.set),
+        color: parser._defaultParseFunc(entity.commands.pixi.color),
+        moveBy: parser._defaultParseFunc(entity.commands.pixi.moveBy),
+    };
+
+    return {
+        pixi: pixi
+    };
+};
+
+PIXICommandSet.runCommands = function (entity) {
+    var pixi = {
+        set: function (tiles, w, h, x, y) {
+            var obj = new TileSprite(entity.name, tiles, w, h);
+            obj.position.x = x;
+            obj.position.y = y;
+            window.stage.addChild(obj);
+
+            entity.pixiObject = obj;
+        },
+
+        color: function (color) {
+            if (entity.pixiObject) {
+                entity.pixiObject.tint = color || 0xFFFFFF;
+            }
+        },
+
+        moveBy: function (dx, dy) {
+            if (entity.pixiObject) {
+                entity.pixiObject.position.x += dx;
+                entity.pixiObject.position.y += dy;
+                //entity.cycleEnded = true;
+            }
+        }
+    };
+
+    return {
+        pixi: pixi
+    };
+};
+
 Entity = function (board, name, script) {
     //Properties
     this.board = board;
@@ -523,6 +575,8 @@ Entity = function (board, name, script) {
     Util.extend(this.parser.commands, DefaultCommandSet.parseCommands.call(null, this.parser, this));
     Util.extend(this.commands, DOMCommandSet.runCommands.call(null, this));
     Util.extend(this.parser.commands, DOMCommandSet.parseCommands.call(null, this.parser, this));
+    Util.extend(this.commands, PIXICommandSet.runCommands.call(null, this));
+    Util.extend(this.parser.commands, PIXICommandSet.parseCommands.call(null, this.parser, this));
 }
 
 Entity.prototype.begin = function () {
@@ -578,13 +632,13 @@ Entity.prototype.execute = function () {
     if (this.ended)
         return;
 
-    this.executingBlock.execNext();
+    //this.executingBlock.execNext();
 
     //TODO add consecutive execution as an option
-    /*while (this.executingBlock.execNext()) {
+    while (this.executingBlock.execNext()) {
         if (this.cycleEnded || this.ended)
             break;
-    }*/
+    }
 }
 
 Board = function () {
@@ -668,7 +722,7 @@ Board.prototype.runEntityTree = function () {
         }
 
         if (this.terminated === false) {
-            loop();
+            //loop()
         }
         else {
             this.finishFunc();
