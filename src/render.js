@@ -14,23 +14,97 @@ TileSprite.prototype.draw = function () {
     //this.setTiles(this.tiles, this.tileWidth, this.tileHeight);
 }
 
-function TextureCache(baseTexture) {
-    this.baseTexture = baseTexture;
+function TextureCache(canvas) {
+    this.baseTexture = PIXI.Texture.fromCanvas(canvas);
+    this.canvas = canvas;
     this.cache = {};
-    this.nextY = 0;
+    this.binTree = {
+        rect: new PIXI.Rectangle(0, 0, this.canvas.width, this.canvas.height),
+        used: false,
+        left: null,
+        right: null
+    };
+}
+
+TextureCache.prototype.getNextCoord = function (width, height) {
+    function traverse(node, depth) {
+        if (!node.left && !node.right) { //is leaf
+            if (node.used || width > node.rect.width || height > node.rect.height) { //is occupied or doesn't fit
+                return null;
+            }
+
+            var lRect, llRect, lrRect, rRect;
+            if (depth % 2 === 0) { //split along x axis first
+                lRect = new PIXI.Rectangle(node.rect.x, node.rect.y, node.rect.width, height);
+                llRect = new PIXI.Rectangle(node.rect.x, node.rect.y, width, height);
+                lrRect = new PIXI.Rectangle(node.rect.x + width, node.rect.y, node.rect.width - width, height);
+                rRect = new PIXI.Rectangle(node.rect.x, node.rect.y + height, node.rect.width, node.rect.height - height);
+            }
+            else { //split along y axis first
+                lRect = new PIXI.Rectangle(node.rect.x, node.rect.y, width, node.rect.height);
+                llRect = new PIXI.Rectangle(node.rect.x, node.rect.y, width, height);
+                lrRect = new PIXI.Rectangle(node.rect.x, node.rect.y + height, width, node.rect.height - height);
+                rRect = new PIXI.Rectangle(node.rect.x + width, node.rect.y, node.rect.width - width, node.rect.height);
+            }
+
+            node.left = {
+                rect: lRect,
+                used: false,
+                left: {
+                    rect: llRect,
+                    used: true,
+                    left: null,
+                    right: null
+                },
+                right: {
+                    rect: lrRect,
+                    used: false,
+                    left: null,
+                    right: null
+                }
+            }
+            node.right = {
+                rect: rRect,
+                used: false,
+                left: null,
+                right: null
+            }
+
+            return {x: node.rect.x, y: node.rect.y};
+        }
+        else { //is branch
+            var coord = null;
+            coord = traverse(node.left, depth + 1);
+            if (coord) {
+                return coord;
+            }
+            coord = traverse(node.right, depth + 1);
+            if (coord) {
+                return coord;
+            }
+
+            return null;
+        }
+    }
+
+    return traverse(this.binTree, 0);
 }
 
 TextureCache.prototype.fetch = function (name, tiles, width, height) {
     if (!this.cache[name]) {
-        this.setTiles(tiles, 0, this.nextY, width, height);
-        this.cache[name] = new PIXI.Texture(this.baseTexture, new PIXI.Rectangle(0, this.nextY, 8*width, 8*height));
-        this.nextY += 8*height;
+        var coord = this.getNextCoord(8*width, 8*height);
+        if (!coord) {
+            return null;
+        }
+
+        this.setTiles(tiles, coord.x, coord.y, width, height);
+        this.cache[name] = new PIXI.Texture(this.baseTexture, new PIXI.Rectangle(coord.x, coord.y, 8*width, 8*height));
     }
     return this.cache[name];
 }
 
 TextureCache.prototype.setTiles = function (tiles, x, y, width, height) {
-    var context = cacheCanvas.getContext('2d');
+    var context = this.canvas.getContext('2d');
     for (var i = 0; i < height; i++) {
         for (var j = 0; j < width; j++) {
             var tileId = tiles[(i * width) + j];
@@ -64,6 +138,20 @@ function update() {
     requestAnimFrame(update);
 }
 
+function testTexturePacking() {
+    for (var i = 0; i < 100; i++) {
+        var w = Math.floor(Math.random() * 30);
+        var h = Math.floor(Math.random() * 30);
+        var tile = Math.floor(Math.random() * 128);
+        var tiles = [];
+        for (var j = 0; j < w * h; j++) {
+            tiles.push(tile);
+        }
+        var tex = textureCache.fetch(i.toString(), tiles, w, h);
+        if (!tex) console.log("couldnt fit")
+    }
+}
+
 function initialize() {
     TILESET = document.createElement('img');
     TILESET.src = 'assets/tileset.bmp';
@@ -74,8 +162,7 @@ function initialize() {
         cacheCanvas.width = 640;
         cacheCanvas.height = 960;
 
-        var baseTexture = PIXI.Texture.fromCanvas(cacheCanvas);
-        textureCache = new TextureCache(baseTexture);
+        textureCache = new TextureCache(cacheCanvas);
 
         window.sprites = {
             player: {
