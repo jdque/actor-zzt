@@ -634,7 +634,6 @@ Entity.prototype.execute = function () {
 
     //this.executingBlock.execNext();
 
-    //TODO add consecutive execution as an option
     while (this.executingBlock.execNext()) {
         if (this.cycleEnded || this.ended)
             break;
@@ -647,6 +646,7 @@ Board = function () {
     this.finishFunc = function () {};
     this.runScript = function () {};
     this.objects = {};
+    this.autoStep = false;
 
     //Execution
     this.boardEntity = null;
@@ -672,6 +672,11 @@ Board.prototype.finish = function (func) {
     return this;
 }
 
+Board.prototype.setAutoStep = function (autoStep) {
+    this.autoStep = autoStep;
+    return this;
+}
+
 Board.prototype.execute = function () {
     //Run setup
     (new Function(
@@ -687,49 +692,47 @@ Board.prototype.execute = function () {
     this.boardEntity.begin();
     this.instances[0]["_board"] = [];
     this.instances[0]["_board"].push(this.boardEntity);
-    while (!this.boardEntity.ended) {
-        this.boardEntity.execute();
-    }
 
     //Begin execution loop
-    this.runEntityTree();
+    if (this.autoStep) {
+        while (!this.terminated) {
+            this.step();
+        }
+    }
 }
 
-Board.prototype.runEntityTree = function () {
-    var loop = function () {
-        //Add spawned objects
-        for (var i = 0; i < this.spawnedObjs.length; i++) {
-            if (!this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name])
-                this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name] = [];
+Board.prototype.step = function () {
+    if (this.terminated) {
+        return;
+    }
 
-            this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name].push(this.spawnedObjs[i]);
-        }
-        this.spawnedObjs = [];
+    //Add spawned objects
+    for (var i = 0; i < this.spawnedObjs.length; i++) {
+        if (!this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name])
+            this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name] = [];
 
-        //Purge dead objects
-        for (var i = 0; i < this.deletedObjs.length; i++) {
-            this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].splice(this.deletedObjs[i], 1);
-        }
-        this.deletedObjs = [];
+        this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name].push(this.spawnedObjs[i]);
+    }
+    this.spawnedObjs = [];
 
-        //Execute object tree
-        for (var i = this.instances.length - 1; i >= 0; i--) {
-            for (var objName in this.instances[i]) {
-                for (var j = 0; j < this.instances[i][objName].length; j++) {
-                    this.instances[i][objName][j].execute();
-                }
+    //Purge dead objects
+    for (var i = 0; i < this.deletedObjs.length; i++) {
+        this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].splice(this.deletedObjs[i], 1);
+    }
+    this.deletedObjs = [];
+
+    //Execute object tree
+    for (var i = this.instances.length - 1; i >= 0; i--) {
+        for (var objName in this.instances[i]) {
+            for (var j = 0; j < this.instances[i][objName].length; j++) {
+                this.instances[i][objName][j].execute();
             }
         }
+    }
 
-        if (this.terminated === false) {
-            //loop()
-        }
-        else {
-            this.finishFunc();
-        }
-    }.bind(this);
-
-    loop();
+    if (this.terminated) {
+        this.finishFunc();
+    }
 }
 
 Board.prototype.getEntity = function () {

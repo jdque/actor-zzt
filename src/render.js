@@ -127,11 +127,7 @@ var cacheCanvas = null;
 var textureCache = null;
 
 function update() {
-    window.board.runEntityTree();
-
-    window.stage.children.forEach(function (child) {
-        child.draw();
-    })
+    window.board.step();
 
     window.renderer.render(stage);
 
