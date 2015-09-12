@@ -118,6 +118,123 @@ TextureCache.prototype.setTiles = function (tiles, x, y, width, height) {
     }
 }
 
+function GridHash(cellSize) {
+    this.cellSize = cellSize || 64;
+    this.cells = {};
+    this.objIdCellMap = {};
+}
+
+GridHash.prototype.getKey = function (x, y) {
+    var cellX = Math.floor(x / this.cellSize);
+    var cellY = Math.floor(y / this.cellSize);
+    return cellX + "," + cellY;
+}
+
+GridHash.prototype.removeObject = function (object) {
+    if (this.objIdCellMap[object.id]) {
+        for (var i = 0; i < this.objIdCellMap[object.id].length; i++) {
+            var cell = this.cells[this.objIdCellMap[object.id][i]];
+            cell[cell.indexOf(object)] = cell[cell.length - 1];
+            cell.pop();
+            /*this.cells[this.objIdCellMap[object.id][i]].splice(
+                this.cells[this.objIdCellMap[object.id][i]].indexOf(object), 1);*/
+        }
+        this.objIdCellMap[object.id] = [];
+    }
+}
+
+GridHash.prototype.addOrUpdateObject = function (object) {
+    var bounds = object.body.bounds;
+
+    if (this.objIdCellMap[object.id]) {
+        if (this.objIdCellMap[object.id].indexOf(this.getKey(bounds.x, bounds.y)) === -1 ||
+            this.objIdCellMap[object.id].indexOf(this.getKey(bounds.x + bounds.width, bounds.y)) === -1 ||
+            this.objIdCellMap[object.id].indexOf(this.getKey(bounds.x, bounds.y + bounds.height)) === -1 ||
+            this.objIdCellMap[object.id].indexOf(this.getKey(bounds.x + bounds.width, bounds.y + bounds.height)) === -1)
+            this.removeObject(object);
+    }
+
+    this.addObjectForPoint(bounds.x, bounds.y, object);
+    this.addObjectForPoint(bounds.x + bounds.width, bounds.y, object);
+    this.addObjectForPoint(bounds.x, bounds.y + bounds.height, object);
+    this.addObjectForPoint(bounds.x + bounds.width, bounds.y + bounds.height, object);
+
+    for (var y = bounds.y + this.cellSize, endY = bounds.y + bounds.height; y < endY; y += this.cellSize) {
+        for (var x = bounds.x + this.cellSize, endX = bounds.x + bounds.width; x < endX; x += this.cellSize) {
+            this.addObjectForPoint(x, y, object);
+        }
+    }
+}
+
+GridHash.prototype.addObjectForPoint = function (x, y, object) {
+    var key = this.getKey(x, y);
+
+    if (!this.cells[key]) {
+        this.cells[key] = [];
+    }
+
+    if (this.cells[key].indexOf(object) === -1) {
+        this.cells[key].push(object);
+        if (!this.objIdCellMap[object.id]) {
+            this.objIdCellMap[object.id] = [];
+        }
+        this.objIdCellMap[object.id].push(key);
+    }
+}
+
+GridHash.prototype.getNearObjects = function (rect) {
+    //var bounds = new PIXI.Rectangle(object.pixiObject.position.x, object.pixiObject.position.y, object.pixiObject.width, object.pixiObject.height);
+    var objects = [];
+
+    var cellX = Math.floor(rect.x / this.cellSize) - 1;
+    var cellY = Math.floor(rect.y / this.cellSize) - 1;
+    var cellW = Math.ceil(rect.width / this.cellSize) + 1;
+    var cellH = Math.ceil(rect.height / this.cellSize) + 1;
+    for (var y = cellY; y <= cellY + cellH; y++) {
+        for (var x = cellX; x <= cellX + cellW; x++) {
+            var cellObjs = this.getCellObjects(x + "," + y);
+            for (var i = 0; i < cellObjs.length; i++) {
+                if (objects.indexOf(cellObjs[i]) === -1) {
+                    objects.push(cellObjs[i]);
+                }
+            }
+        }
+    }
+
+    return objects;
+}
+
+GridHash.prototype.getIntersectingObjects = function (rect) {
+    var nearObjs = this.getNearObjects(rect);
+    var intersectingObjs = [];
+    for (var i = 0; i < nearObjs.length; i++) {
+        if (this.intersects(rect, nearObjs[i].body.bounds)) {
+            intersectingObjs.push(nearObjs[i]);
+        }
+    }
+
+    return intersectingObjs;
+}
+
+GridHash.prototype.intersects = function (rect1, rect2) {
+    if (rect1.x + rect1.width > rect2.x &&
+        rect1.x < rect2.x + rect2.width &&
+        rect1.y + rect1.height > rect2.y &&
+        rect1.y < rect2.y + rect2.height)
+        return true;
+
+    return false;
+}
+
+GridHash.prototype.getCellObjects = function (key) {
+    return this.cells[key] || [];
+}
+
+GridHash.prototype.getCellObjectsForPoint = function (x, y) {
+    var key = this.getKey(x, y);
+    return this.cells[key] || [];
+}
+
 var WIDTH = 640;
 var HEIGHT = 480;
 var stage = new PIXI.Stage(0x000000);
@@ -160,6 +277,8 @@ function initialize() {
 
         textureCache = new TextureCache(cacheCanvas);
 
+        window.collision = new GridHash(32);
+
         window.sprites = {
             player: {
                 tiles: [219, 219,
@@ -186,49 +305,30 @@ function initialize() {
                 end()
 
                 label('move')
-                    set('$rand', expr('Math.floor(Math.random() * 4)'))
-                    _if('$rand === 0')
-                        pixi.moveBy(8, 0)
-                    _elif('$rand === 1')
-                        pixi.moveBy(0, 8)
-                    _elif('$rand === 2')
-                        pixi.moveBy(-8, 0)
-                    _elif('$rand === 3')
-                        pixi.moveBy(0, -8)
-                    _endif()
                     wait(5)
                     jump('move')
                 end()
             });
 
             object('Enemy', function () {
-                pixi.set(sprites.enemy.tiles, sprites.enemy.width, sprites.enemy.height,
-                    Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8)
+                body.set(Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8, sprites.enemy.width * 8, sprites.enemy.height * 8, collision)
+                pixi.set(sprites.enemy.tiles, sprites.enemy.width, sprites.enemy.height, Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8)
                 pixi.color(0xFF0000)
+                pixi.alpha(0.5)
                 jump('move')
                 end()
 
                 label('move')
-                    set('$rand', expr('Math.floor(Math.random() * 4)'))
-                    _if('$rand === 0')
-                        pixi.moveBy(8, 0)
-                    _elif('$rand === 1')
-                        pixi.moveBy(0, 8)
-                    _elif('$rand === 2')
-                        pixi.moveBy(-8, 0)
-                    _elif('$rand === 3')
-                        pixi.moveBy(0, -8)
-                    _endif()
-                    wait(5)
+                    body.move('/rnd')
                     jump('move')
                 end()
             });
         });
         board.run(function () {
-            loop(100)
-                spawn('Player')
+            loop(300)
                 spawn('Enemy')
             endloop()
+            spawn('Player')
         });
         board.execute();
 

@@ -269,6 +269,7 @@ Parser.prototype.parse = function () {
         'var exec      = this.commands.exec;' +
         'var element   = this.commands.element;' +
         'var pixi      = this.commands.pixi;' +
+        'var body      = this.commands.body;' +
         'label("_start");' +
         this.entity.script.toString().replace("function ()", "") + ";" +
         'end();'
@@ -508,7 +509,8 @@ PIXICommandSet.parseCommands = function (parser, entity) {
     var pixi = {
         set: parser._defaultParseFunc(entity.commands.pixi.set),
         color: parser._defaultParseFunc(entity.commands.pixi.color),
-        moveBy: parser._defaultParseFunc(entity.commands.pixi.moveBy),
+        alpha: parser._defaultParseFunc(entity.commands.pixi.alpha),
+        moveBy: parser._defaultParseFunc(entity.commands.pixi.moveBy)
     };
 
     return {
@@ -533,11 +535,16 @@ PIXICommandSet.runCommands = function (entity) {
             }
         },
 
+        alpha: function (alpha) {
+            if (entity.pixiObject) {
+                entity.pixiObject.alpha = alpha || 1;
+            }
+        },
+
         moveBy: function (dx, dy) {
             if (entity.pixiObject) {
                 entity.pixiObject.position.x += dx;
                 entity.pixiObject.position.y += dy;
-                //entity.cycleEnded = true;
             }
         }
     };
@@ -547,8 +554,98 @@ PIXICommandSet.runCommands = function (entity) {
     };
 };
 
+PhysicsCommandSet = {};
+
+PhysicsCommandSet.parseCommands = function (parser, entity) {
+    var body = {
+        set: parser._defaultParseFunc(entity.commands.body.set),
+        moveBy: parser._defaultParseFunc(entity.commands.body.moveBy),
+
+        move: function (dirStr) {
+            var dirs = dirStr.split('/');
+            for (var i = 0; i < dirs.length; i++) {
+                if (dirs[i].length === 0)
+                    continue;
+
+                parser.currentBlock.add(entity.commands.body.move.bind(entity, dirs[i]));
+                parser.commands.wait(5);
+            }
+        }
+    };
+
+    return {
+        body: body
+    };
+};
+
+PhysicsCommandSet.runCommands = function (entity) {
+    var body = {
+        set: function (x, y, width, height, collider) {
+            entity.body = {
+                bounds: new PIXI.Rectangle(x, y, width, height),
+                collider: collider
+            };
+
+            entity.body.collider.addOrUpdateObject(entity);
+        },
+
+        moveBy: function (dx, dy) {
+            if (!entity.body)
+                return;
+
+            entity.body.bounds.x += dx;
+            entity.body.bounds.y += dy;
+
+            var objs = entity.body.collider.getIntersectingObjects(entity.body.bounds);
+            if (objs.length > 1) {
+                entity.body.bounds.x -= dx;
+                entity.body.bounds.y -= dy;
+            }
+
+            entity.body.collider.addOrUpdateObject(entity);
+
+            if (entity.pixiObject) {
+                entity.pixiObject.position.x = entity.body.bounds.x;
+                entity.pixiObject.position.y = entity.body.bounds.y;
+            }
+        },
+
+        move: function (dir) {
+            var dx = 0;
+            var dy = 0;
+            switch(dir) {
+                case 'n':
+                    dy = -8;
+                    break;
+                case 's':
+                    dy = 8;
+                    break;
+                case 'w':
+                    dx = -8;
+                    break;
+                case 'e':
+                    dx = 8;
+                    break;
+                case 'rnd':
+                    var dir = Math.floor(Math.random() * 4);
+                    if      (dir === 0) { dy = -8; }
+                    else if (dir === 1) { dy = 8;  }
+                    else if (dir === 2) { dx = -8; }
+                    else                { dx = 8;  }
+                    break;
+            }
+            entity.commands.body.moveBy(dx, dy);
+        }
+    };
+
+    return {
+        body: body
+    };
+};
+
 Entity = function (board, name, script) {
     //Properties
+    this.id = Util.generateId().toString();
     this.board = board;
     this.name = name;
     this.script = script;
@@ -577,6 +674,8 @@ Entity = function (board, name, script) {
     Util.extend(this.parser.commands, DOMCommandSet.parseCommands.call(null, this.parser, this));
     Util.extend(this.commands, PIXICommandSet.runCommands.call(null, this));
     Util.extend(this.parser.commands, PIXICommandSet.parseCommands.call(null, this.parser, this));
+    Util.extend(this.commands, PhysicsCommandSet.runCommands.call(null, this));
+    Util.extend(this.parser.commands, PhysicsCommandSet.parseCommands.call(null, this.parser, this));
 }
 
 Entity.prototype.begin = function () {
