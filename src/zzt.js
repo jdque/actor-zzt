@@ -580,29 +580,26 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
 
 PhysicsCommandSet.runCommands = function (entity) {
     var body = {
-        set: function (x, y, width, height, collider) {
+        set: function (x, y, width, height, spatial) {
             entity.body = {
                 bounds: new PIXI.Rectangle(x, y, width, height),
-                collider: collider
+                spatial: spatial
             };
 
-            entity.body.collider.addOrUpdateObject(entity);
+            entity.body.spatial.register(entity);
         },
 
         moveBy: function (dx, dy) {
             if (!entity.body)
                 return;
 
-            entity.body.bounds.x += dx;
-            entity.body.bounds.y += dy;
-
-            var objs = entity.body.collider.getIntersectingObjects(entity.body.bounds);
-            if (objs.length > 1) {
-                entity.body.bounds.x -= dx;
-                entity.body.bounds.y -= dy;
+            var objs = entity.body.spatial.getInRect(entity.body.bounds, dx, dy);
+            if (objs.length <= 1) {
+                entity.body.bounds.x += dx;
+                entity.body.bounds.y += dy;
             }
 
-            entity.body.collider.addOrUpdateObject(entity);
+            entity.body.spatial.update(entity);
 
             if (entity.pixiObject) {
                 entity.pixiObject.position.x = entity.body.bounds.x;
