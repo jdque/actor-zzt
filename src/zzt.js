@@ -593,7 +593,7 @@ PhysicsCommandSet.runCommands = function (entity) {
             if (!entity.body)
                 return;
 
-            var objs = entity.body.spatial.getInRect(entity.body.bounds, dx, dy);
+            var objs = entity.body.spatial.getIntersect(entity.body.bounds, dx, dy);
             if (objs.length <= 1) {
                 entity.body.bounds.x += dx;
                 entity.body.bounds.y += dy;
