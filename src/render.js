@@ -122,6 +122,7 @@ function GridHash(cellSize) {
     this.cellSize = cellSize || 64;
     this.cells = {};
     this.objIdCellMap = {};
+    this.bounds = {min: new PIXI.Point(0, 0), max: new PIXI.Point(0, 0)};
 }
 
 GridHash.prototype.getKey = function (x, y) {
@@ -151,6 +152,12 @@ GridHash.prototype.addObject = function (object) {
             this.addObjectForPoint(x, y, object);
         }
     }
+
+    //Update global bounds
+    if (bounds.x < this.bounds.min.x) this.bounds.min.x = bounds.x;
+    if (bounds.y < this.bounds.min.y) this.bounds.min.y = bounds.y;
+    if (bounds.x + bounds.width > this.bounds.max.x) this.bounds.max.x = bounds.x + bounds.width;
+    if (bounds.y + bounds.height > this.bounds.max.y) this.bounds.max.y = bounds.y + bounds.height;
 }
 
 GridHash.prototype.removeObject = function (object) {
@@ -217,6 +224,10 @@ GridHash.prototype.getNearbyObjects = function (x, y, w, h) {
     }
 
     return objects;
+}
+
+GridHash.prototype.getBounds = function () {
+    return this.bounds;
 }
 
 GridHash.prototype.getCellObjects = function (key) {
@@ -288,6 +299,15 @@ Spatial.prototype.isWithin = function (rect, fromX, fromY, distance) {
     return false;
 }
 
+Spatial.prototype.isDirection = function (testRect, fromRect, dirX, dirY) {
+    if (dirX === -1 && testRect.x + testRect.width > fromRect.x) return false;
+    if (dirX === 1 && testRect.x < fromRect.x + fromRect.width) return false;
+    if (dirY === -1 && testRect.y + testRect.height > fromRect.y) return false;
+    if (dirY === 1 && testRect.y < fromRect.y + fromRect.height) return false;
+
+    return true;
+}
+
 Spatial.prototype.getAll = function () {
     return this.objects;
 }
@@ -338,6 +358,38 @@ Spatial.prototype.getWithin = function (x, y, distance) {
     }
 
     return objs;
+}
+
+Spatial.prototype.getDirection = function (rect, dirX, dirY) {
+    var queryRect = new PIXI.Rectangle(0, 0, 0, 0);
+    var bounds = this.finder.getBounds();
+    if (dirX === -1) {
+        queryRect.x = bounds.min.x;
+        queryRect.width = rect.x - bounds.min.x;
+    }
+    else if (dirX === 1) {
+        queryRect.x = rect.x + rect.width;
+        queryRect.width = bounds.max.x - queryRect.x;
+    }
+    else {
+        queryRect.x = bounds.min.x;
+        queryRect.width = bounds.max.x - bounds.min.x;
+    }
+
+    if (dirY === -1) {
+        queryRect.y = bounds.min.y;
+        queryRect.height = rect.y - bounds.min.y;
+    }
+    else if (dirY === 1) {
+        queryRect.y = rect.y + rect.height;
+        queryRect.height = bounds.max.y - queryRect.y;
+    }
+    else {
+        queryRect.y = bounds.min.y;
+        queryRect.height = bounds.max.y - bounds.min.y;
+    }
+
+    return this.getInside(queryRect, 0, 0);
 }
 
 Spatial.prototype.query = function () {
@@ -427,6 +479,25 @@ Spatial.prototype.query = function () {
             return closure;
         }
 
+        function direction(fromRect, dirX, dirY) {
+            if (!resultSet) {
+                if (notIsActive) {
+                    resultSet = listDiff(spatial.getAll(), spatial.getDirection(fromRect, dirX, dirY));
+                }
+                else {
+                    resultSet = spatial.getDirection(fromRect, dirX, dirY);
+                }
+            }
+            else {
+                resultSet = resultSet.filter(function (obj) {
+                    return spatial.isDirection(obj.body.bounds, fromRect, dirX, dirY) !== notIsActive;
+                });
+            }
+
+            notIsActive = false;
+            return closure;
+        }
+
         function not() {
             notIsActive = !notIsActive;
             return closure;
@@ -441,6 +512,7 @@ Spatial.prototype.query = function () {
             intersect: intersect,
             inside: inside,
             distance: distance,
+            direction: direction,
             not: not,
             get: get
         }
@@ -512,9 +584,9 @@ function initialize() {
         window.board = new Board();
         board.setup(function () {
             object('Player', function () {
-                body.set(0, 0, 16, 16, spatial);
+                body.set(640 / 2, 480 / 2, 16, 16, spatial);
                 pixi.set(sprites.player.tiles, sprites.player.width, sprites.player.height,
-                    Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8)
+                    640 / 2, 480 / 2)
                 pixi.color(0x0000FF)
                 jump('move')
                 end()
@@ -527,8 +599,10 @@ function initialize() {
                         });
 
                         var boundary = entity.body.spatial.query()
-                            .intersect(new PIXI.Rectangle(128, 128, 640 - 256, 480 - 256))
-                            .not().intersect(new PIXI.Rectangle(128, 128, 128, 128))
+                            //.intersect(new PIXI.Rectangle(128, 128, 640 - 256, 480 - 256))
+                            //.not().intersect(new PIXI.Rectangle(128, 128, 128, 128))
+                            .distance(128, entity.body.bounds.x + entity.body.bounds.width / 2, entity.body.bounds.y + entity.body.bounds.height / 2)
+                            .direction(entity.body.bounds, 0, -1)
                             .get();
                         boundary.forEach(function (obj) {
                             obj.pixiObject.tint = 0xFFFFFF;

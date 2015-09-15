@@ -612,23 +612,23 @@ PhysicsCommandSet.runCommands = function (entity) {
             var dy = 0;
             switch(dir) {
                 case 'n':
-                    dy = -8;
+                    dy = -4;
                     break;
                 case 's':
-                    dy = 8;
+                    dy = 4;
                     break;
                 case 'w':
-                    dx = -8;
+                    dx = -4;
                     break;
                 case 'e':
-                    dx = 8;
+                    dx = 4;
                     break;
                 case 'rnd':
                     var dir = Math.floor(Math.random() * 4);
-                    if      (dir === 0) { dy = -8; }
-                    else if (dir === 1) { dy = 8;  }
-                    else if (dir === 2) { dx = -8; }
-                    else                { dx = 8;  }
+                    if      (dir === 0) { dy = -4; }
+                    else if (dir === 1) { dy = 4;  }
+                    else if (dir === 2) { dx = -4; }
+                    else                { dx = 4;  }
                     break;
             }
             entity.commands.body.moveBy(dx, dy);
