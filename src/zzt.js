@@ -21,13 +21,14 @@ Util = (function () {
 })();
 
 Expression = function (expr, entity) {
+    this.entity = entity;
     this.expr = new Function(
         'return ' + expr.replace(/[$]/g, 'this.variables.')
-    ).bind(entity);
+    );
 }
 
 Expression.prototype.evaluate = function () {
-    return this.expr();
+    return this.expr.call(this.entity);
 }
 
 Scope = function (scope, labelName) {
@@ -296,7 +297,7 @@ Parser.prototype.parse = function () {
         'label("_start");' +
         this.entity.script.toString().replace("function ()", "") + ";" +
         'end();'
-    ).bind(this))();
+    )).call(this);
 }
 
 DefaultCommandSet = {};
@@ -808,7 +809,7 @@ Board.prototype.execute = function () {
     (new Function(
         'var object = this.defineObject.bind(this);' +
         this.setupFunc.toString().replace("function ()", "")
-    ).bind(this))();
+    )).call(this);
 
     //Run root entity script
     this.boardEntity = new Entity(this, "_board", this.runScript);
