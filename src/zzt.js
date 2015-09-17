@@ -224,6 +224,24 @@ Parser = function (entity) {
     this.commands = {};
     this.currentBlock = null;
     this.blockStack = [];
+
+    this.modules = {};
+    this.addedModules = [];
+}
+
+Parser.prototype.registerModule = function (name, moduleObj) {
+    this.modules[name] = moduleObj;
+}
+
+Parser.prototype.addModule = function (name) {
+    var moduleObj = this.modules[name];
+    if (!moduleObj) {
+        return;
+    }
+
+    this.addedModules.push(name);
+    Util.extend(this.entity.commands, moduleObj.runCommands.call(null, this.entity));
+    Util.extend(this.commands, moduleObj.parseCommands.call(null, this, this.entity));
 }
 
 Parser.prototype.parseNewBlock = function (block) {
@@ -243,7 +261,7 @@ Parser.prototype._defaultParseFunc = function (runCommand) {
 }
 
 Parser.prototype.parse = function () {
-    (new Function(
+    var commands =
         'var expr      = this.commands.expr;' +
         'var label     = this.commands.label;' +
         'var end       = this.commands.end;' +
@@ -267,9 +285,14 @@ Parser.prototype.parse = function () {
         'var die       = this.commands.die;' +
         'var become    = this.commands.become;' +
         'var exec      = this.commands.exec;' +
-        'var element   = this.commands.element;' +
-        'var pixi      = this.commands.pixi;' +
-        'var body      = this.commands.body;' +
+        'var adopt     = this.commands.adopt;';
+
+    this.addedModules.forEach(function (name) {
+        commands += 'var ' + name + ' = this.commands.' + name + ';';
+    });
+
+    (new Function(
+        commands +
         'label("_start");' +
         this.entity.script.toString().replace("function ()", "") + ";" +
         'end();'
@@ -348,6 +371,10 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
 
     send: function (scopeStr, label) {
         parser.currentBlock.add(entity.commands.send.bind(entity, new Scope(scopeStr, label)));
+    },
+
+    adopt: function (moduleName, initParams) {
+        parser.currentBlock.add(entity.commands[moduleName].__init__.bind(entity, initParams));
     },
 
     terminate: parser._defaultParseFunc(entity.commands.terminate),
@@ -474,32 +501,34 @@ DefaultCommandSet.runCommands = function (entity) { return {
 DOMCommandSet = {};
 
 DOMCommandSet.parseCommands = function (parser, entity) {
-    var element = {
-        set: parser._defaultParseFunc(entity.commands.element.set),
-        exec: parser._defaultParseFunc(entity.commands.element.exec),
+    var html = {
+        set: parser._defaultParseFunc(entity.commands.html.set),
+        exec: parser._defaultParseFunc(entity.commands.html.exec),
     };
 
     return {
-        element: element
+        html: html
     };
 };
 
 DOMCommandSet.runCommands = function (entity) {
-    var element = {
-        set: function (id) {
-            entity.element = document.getElementById(id) || null;
-            if (entity.element)
+    var html = {
+        __init__: function (params) {
+            entity.element = document.getElementById(params.id) || null;
+            if (entity.element) {
                 entity.element.onclick = function () { entity.gotoLabel('@click') }.bind(entity);
+            }
         },
 
         exec: function (func) {
-            if (entity.element)
+            if (entity.element) {
                 func(entity.element);
+            }
         }
     };
 
     return {
-        element: element
+        html: html
     };
 };
 
@@ -520,10 +549,10 @@ PIXICommandSet.parseCommands = function (parser, entity) {
 
 PIXICommandSet.runCommands = function (entity) {
     var pixi = {
-        set: function (tiles, w, h, x, y) {
-            var obj = new TileSprite(entity.name, tiles, w, h);
-            obj.position.x = x;
-            obj.position.y = y;
+        __init__: function (params) {
+            var obj = new TileSprite(entity.name, params.tiles, params.width, params.height);
+            obj.position.x = params.x;
+            obj.position.y = params.y;
             window.stage.addChild(obj);
 
             entity.pixiObject = obj;
@@ -580,10 +609,10 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
 
 PhysicsCommandSet.runCommands = function (entity) {
     var body = {
-        set: function (x, y, width, height, spatial) {
+        __init__: function (params) {
             entity.body = {
-                bounds: new PIXI.Rectangle(x, y, width, height),
-                spatial: spatial
+                bounds: params.bounds,
+                spatial: params.spatial
             };
 
             entity.body.spatial.register(entity);
@@ -667,12 +696,13 @@ Entity = function (board, name, script) {
 
     Util.extend(this.commands, DefaultCommandSet.runCommands.call(null, this));
     Util.extend(this.parser.commands, DefaultCommandSet.parseCommands.call(null, this.parser, this));
-    Util.extend(this.commands, DOMCommandSet.runCommands.call(null, this));
-    Util.extend(this.parser.commands, DOMCommandSet.parseCommands.call(null, this.parser, this));
-    Util.extend(this.commands, PIXICommandSet.runCommands.call(null, this));
-    Util.extend(this.parser.commands, PIXICommandSet.parseCommands.call(null, this.parser, this));
-    Util.extend(this.commands, PhysicsCommandSet.runCommands.call(null, this));
-    Util.extend(this.parser.commands, PhysicsCommandSet.parseCommands.call(null, this.parser, this));
+
+    this.parser.registerModule('html', DOMCommandSet);
+    this.parser.registerModule('pixi', PIXICommandSet);
+    this.parser.registerModule('body', PhysicsCommandSet);
+    this.parser.addModule('html');
+    this.parser.addModule('pixi');
+    this.parser.addModule('body');
 }
 
 Entity.prototype.begin = function () {

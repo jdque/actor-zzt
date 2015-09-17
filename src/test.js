@@ -134,7 +134,7 @@ board.run(function (spawn) {
 
 board.setup(function () {
     object('about', function () {
-        element.set('dom_about')
+        adopt('html', {id: 'dom_about'})
         end()
         
         label('@click')
@@ -143,7 +143,7 @@ board.setup(function () {
     });
 
     object('pictures', function () {
-        element.set('dom_pictures')
+        adopt('html', {id: 'dom_pictures'})
         end()
         
         label('@click')
@@ -152,17 +152,17 @@ board.setup(function () {
     });
 
     object('content', function () {
-        element.set('dom_content')
+        adopt('html', {id: 'dom_content'})
         end()
         
         label('showabout')
-            element.exec(function (elem) {
+            html.exec(function (elem) {
                 elem.innerHTML = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus et tincidunt erat. Morbi mollis, felis non sollicitudin laoreet, diam urna tincidunt nunc, id blandit purus enim at neque. Mauris nec leo a urna fermentum efficitur. Aenean scelerisque nulla egestas neque dignissim, ut pellentesque lectus lobortis. Donec ut odio ac augue ornare dictum ac ut sem. Donec eu justo at mauris dictum ullamcorper. Aliquam erat volutpat. Suspendisse eleifend laoreet odio, a interdum elit mollis nec. Vivamus id erat ante. Vivamus sagittis, dui ut molestie viverra, justo erat varius orci, et consectetur ipsum mi id ligula.";
             })
         end()
 
         label('showpictures')
-            element.exec(function (elem) {
+            html.exec(function (elem) {
                 elem.innerHTML = "Here is an image<br /><br />";
                 //create image element
                 var image = document.createElement('img');
@@ -176,30 +176,30 @@ board.setup(function () {
         end()
 
         label('squawk')
-            element.exec(function (elem) {
+            html.exec(function (elem) {
                 elem.innerHTML += "<br /><br />squawk!";
             })
         end()
     });
 
     object('image', function () {
-        element.set('dom_image')
+        adopt('html', {id: 'dom_image'})
         jump('animate')
         end()
         
         label('animate')
             wait(2)
-            element.exec(function (elem) { elem.height = 40; })
+            html.exec(function (elem) { elem.height = 40; })
             wait(2)
-            element.exec(function (elem) { elem.height = 80; })
+            html.exec(function (elem) { elem.height = 80; })
             wait(2)
-            element.exec(function (elem) { elem.height = 120; })
+            html.exec(function (elem) { elem.height = 120; })
             wait(2)
-            element.exec(function (elem) { elem.height = 160; })
+            html.exec(function (elem) { elem.height = 160; })
             wait(2)
-            element.exec(function (elem) { elem.height = 200; })
+            html.exec(function (elem) { elem.height = 200; })
             wait(2)
-            element.exec(function (elem) { elem.height = 240; })
+            html.exec(function (elem) { elem.height = 240; })
             wait(4)
             send('content', 'squawk')
             die()
@@ -214,3 +214,10 @@ board.run(function () {
 });
 
 board.execute();
+
+requestAnimationFrame(update);
+
+function update() {
+    board.step();
+    requestAnimationFrame(update);
+}

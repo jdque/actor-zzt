@@ -569,24 +569,23 @@ function initialize() {
             player: {
                 tiles: [219, 219,
                         219, 219],
-                width: 2,
-                height: 2
+                width: 2, height: 2,
+                x: 320, y: 240
             },
             enemy: {
                 tiles: [219, 219, 219,
                         219, 219, 219,
                         219, 219, 219],
-                width: 3,
-                height: 3
+                width: 3, height: 3,
+                x: 0, y: 0
             }
         }
 
         window.board = new Board();
         board.setup(function () {
             object('Player', function () {
-                body.set(640 / 2, 480 / 2, 16, 16, spatial);
-                pixi.set(sprites.player.tiles, sprites.player.width, sprites.player.height,
-                    640 / 2, 480 / 2)
+                adopt('body', { bounds: new PIXI.Rectangle(640 / 2, 480 / 2, 16, 16), spatial: spatial})
+                adopt('pixi', sprites.player)
                 pixi.color(0x0000FF)
                 jump('move')
                 end()
@@ -614,8 +613,8 @@ function initialize() {
             });
 
             object('Enemy', function () {
-                body.set(Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8, sprites.enemy.width * 8, sprites.enemy.height * 8, spatial)
-                pixi.set(sprites.enemy.tiles, sprites.enemy.width, sprites.enemy.height, Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8)
+                adopt('body', { bounds: new PIXI.Rectangle(Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8, sprites.enemy.width * 8, sprites.enemy.height * 8), spatial: spatial})
+                adopt('pixi', sprites.enemy)
                 pixi.color(0xFF0000)
                 pixi.alpha(0.5)
                 jump('move')
