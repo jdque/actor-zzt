@@ -312,9 +312,11 @@ Parser.prototype.parse = function () {
         commands += 'var ' + name + ' = this.commands.' + name + ';';
     });
 
+    var varDefList = '["' + this.entity.initVarDefList.join('","') + '"]';
+
     (new Function(
         commands +
-        'label("_start");' +
+        'label("_start", ' + varDefList + ');' +
         this.entity.script.toString().replace("function ()", "") + ";" +
         'end();'
     )).call(this);
@@ -512,8 +514,8 @@ DefaultCommandSet.runCommands = function (entity) { return {
         }
     },
 
-    spawn: function (objName) {
-        entity.board.spawnObject(objName, entity);
+    spawn: function (objName, initVarArgs) {
+        entity.board.spawnObject(objName, entity, initVarArgs);
     },
 
     die: function () {
@@ -523,8 +525,8 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.board.removeObject(entity);
     },
 
-    become: function (name) {
-        entity.board.replaceObject(entity, name);
+    become: function (name, initVarArgs) {
+        entity.board.replaceObject(entity, name, initVarArgs);
     },
 
     exec: function (func) {
@@ -703,7 +705,7 @@ PhysicsCommandSet.runCommands = function (entity) {
     };
 };
 
-Entity = function (board, name, script) {
+Entity = function (board, name, script, initVarDefList) {
     //Properties
     this.id = Util.generateId().toString();
     this.board = board;
@@ -711,6 +713,7 @@ Entity = function (board, name, script) {
     this.script = script;
     this.depth = 0;
     this.parent = null;
+    this.initVarDefList = initVarDefList || [];
 
     //State
     this.variables = {};
@@ -739,9 +742,9 @@ Entity = function (board, name, script) {
     this.parser.addModule('body');
 }
 
-Entity.prototype.begin = function () {
+Entity.prototype.begin = function (initVarArgs) {
     this.cycleEnded = false;
-    this.gotoLabel('_start');
+    this.gotoLabel('_start', initVarArgs);
 }
 
 Entity.prototype.gotoLabel = function (name, varArgs) {
@@ -846,7 +849,7 @@ Board.prototype.execute = function () {
     )).call(this);
 
     //Run root entity script
-    this.boardEntity = new Entity(this, "_board", this.runScript);
+    this.boardEntity = new Entity(this, "_board", this.runScript, []);
     this.boardEntity.depth = 0;
     this.boardEntity.parent = this.boardEntity;
     this.boardEntity.parser.parse();
@@ -900,17 +903,28 @@ Board.prototype.getEntity = function () {
     return this.boardEntity;
 }
 
-Board.prototype.defineObject = function (name, script) {
+Board.prototype.defineObject = function (name, varDefListOrScript, script) {
     if (this.objects[name]) {
         throw "Duplicate object definition";
     }
-    var obj = new Entity(this, name, script);
+
+    var obj;
+    if (arguments.length === 3) {
+        obj = new Entity(this, name, script, varDefListOrScript);
+    }
+    else if (arguments.length === 2) {
+        obj = new Entity(this, name, varDefListOrScript, []);
+    }
+    else {
+        throw "Bad object definition";
+    }
+
     this.objects[name] = obj;
 
     return obj;
 }
 
-Board.prototype.spawnObject = function (name, parent) {
+Board.prototype.spawnObject = function (name, parent, initVarArgs) {
     if (!this.objects[name])
         return;
 
@@ -919,11 +933,11 @@ Board.prototype.spawnObject = function (name, parent) {
             this.instances.push({});
     }
 
-    var obj = new Entity(this, this.objects[name].name, this.objects[name].script);
+    var obj = new Entity(this, this.objects[name].name, this.objects[name].script, this.objects[name].initVarDefList);
     obj.depth = parent ? parent.depth + 1 : 0;
     obj.parent = parent || obj;
     obj.parser.parse();
-    obj.begin();
+    obj.begin(initVarArgs);
 
     this.spawnedObjs.push(obj);
 
@@ -934,8 +948,8 @@ Board.prototype.removeObject = function (entity) {
     this.deletedObjs.push(entity);
 }
 
-Board.prototype.replaceObject = function (target, newName) {
-    var newObject = this.spawnObject(this.objects[newName].name, target.parent);
+Board.prototype.replaceObject = function (target, newName, initVarArgs) {
+    var newObject = this.spawnObject(this.objects[newName].name, target.parent, initVarArgs);
 
     var children = this.getChildObjects(target);
     for (var i = 0; i < children.length; i++) {

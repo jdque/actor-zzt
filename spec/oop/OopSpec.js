@@ -131,6 +131,30 @@ describe("Oop", function () {
 			});
 			board.execute();
 		});
+
+		it("should spawn objects with initialization variables", function (done) {
+			board.setup(function () {
+				object('Player', ['@param'], function () {
+					print(expr('@param'))
+					spawn('Child', [2, 3])
+					end()
+				});
+
+				object('Child', ['@param1', '@param2'], function () {
+					print(expr('@param1'))
+					print(expr('@param2'))
+					terminate()
+				});
+			});
+			board.run(function () {
+				spawn('Player', [1])
+			});
+			board.finish(function () {
+				expect(console.history.toString()).toEqual([1, 2, 3].toString())
+				done();
+			});
+			board.execute();
+		});
 	});
 
 	describe("Control flow", function () {
