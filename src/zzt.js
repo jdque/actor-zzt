@@ -23,7 +23,7 @@ Util = (function () {
 Expression = function (expr, entity) {
     this.entity = entity;
     this.expr = new Function(
-        'return ' + expr.replace(/[$]/g, 'this.variables.')
+        'return ' + expr.replace(/\@/g, 'this.executingBlock.variables.').replace(/\$/g, 'this.variables.')
     );
 }
 
@@ -31,15 +31,17 @@ Expression.prototype.evaluate = function () {
     return this.expr.call(this.entity);
 }
 
-Scope = function (scope, labelName) {
+Scope = function (scope) {
     var self   = "[obj].forEach(function (obj) {\n";
     var all    = "children(obj).forEach(function (obj) {\n";
     var name   = "children(obj).filter(function (obj) { return obj.name === '{name}'}).forEach(function (obj) {\n";
     var parent = "[parent(obj)].forEach(function (obj) {\n";
     var board  = "[board(obj)].forEach(function (obj) {\n";
-    var label  = "obj.gotoLabel('{label}');\n";
+    var out    = "outObjs.push(obj);\n";
 
     var funcParts = [];
+    funcParts.push('var outObjs = [];\n');
+
     var scopeParts = scope.split('.');
     scopeParts.forEach(function (part, idx) {
         switch (part) {
@@ -70,11 +72,12 @@ Scope = function (scope, labelName) {
                 break;
         }
     });
-    funcParts.push(label.replace('{label}', labelName));
+    funcParts.push(out);
     var funcStr = funcParts.join("");
-    for (var i = 0; i < funcParts.length - 1; i++) {
-        funcStr += "})\n";
+    for (var i = 0; i < funcParts.length - 2; i++) {
+        funcStr += "});\n";
     }
+    funcStr += 'return outObjs;';
 
     this.scopeFunc = new Function('obj, children, parent, board', funcStr);
 }
@@ -92,12 +95,14 @@ Scope.prototype.board = function (entity) {
 }
 
 Scope.prototype.execute = function (entity) {
-    this.scopeFunc(entity, this.children, this.parent, this.board);
+    return this.scopeFunc(entity, this.children, this.parent, this.board) || [];
 }
 
-Block = function () {
+Block = function (varDefList) {
     this._id = Util.generateId().toString();
     this.commands = [];
+    this.variableDefs = varDefList || [];
+    this.variables = {};
     this.index = -1;
 }
 
@@ -111,6 +116,7 @@ Block.prototype.add = function (command) {
 
 Block.prototype.reset = function () {
     this.index = -1;
+    this.variables = {};
 }
 
 Block.prototype.gotoOffset = function (offset) {
@@ -129,6 +135,20 @@ Block.prototype.execNext = function () {
     this.index++;
     this.commands[this.index]();
     return true;
+}
+
+Block.prototype.injectVariables = function (varValueList) {
+    if (!varValueList)
+        return;
+
+    for (var i = 0; i < varValueList.length; i++) {
+        if (i > this.variableDefs.length - 1) {
+            continue;
+        }
+        var varName = this.variableDefs[i].replace('\@', '');
+        var value = varValueList[i];
+        this.variables[varName] = (value instanceof Expression) ? value.evaluate() : value;
+    }
 }
 
 IfBlock = function () {
@@ -307,9 +327,9 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         return new Expression(expr, entity);
     },
 
-    label: function (name) {
+    label: function (name, varDefList) {
         if (parser.blockStack.length === 0) {
-            var block = entity.createBlock();
+            var block = entity.createBlock(varDefList);
             parser.parseNewBlock(block);
         }
 
@@ -370,18 +390,21 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         parser.commands.endloop();
     },
 
-    send: function (scopeStr, label) {
-        parser.currentBlock.add(entity.commands.send.bind(entity, new Scope(scopeStr, label)));
+    send: function (scopeStr, label, varValueList) {
+        parser.currentBlock.add(entity.commands.send.bind(entity, new Scope(scopeStr), label, varValueList));
     },
 
     adopt: function (moduleName, initParams) {
         parser.currentBlock.add(entity.commands[moduleName].__init__.bind(entity, initParams));
     },
 
+    set: function (varName, value) {
+        parser.currentBlock.add(entity.commands.set.bind(entity, varName, value));
+    },
+
     terminate: parser._defaultParseFunc(entity.commands.terminate),
     print:     parser._defaultParseFunc(entity.commands.print),
     jump:      parser._defaultParseFunc(entity.commands.jump),
-    set:       parser._defaultParseFunc(entity.commands.set),
     lock:      parser._defaultParseFunc(entity.commands.lock),
     unlock:    parser._defaultParseFunc(entity.commands.unlock),
     zap:       parser._defaultParseFunc(entity.commands.zap),
@@ -443,16 +466,26 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.cycleEnded = true;
     },
 
-    jump: function (label) {
-        entity.gotoLabel(label);
+    jump: function (label, varValueList) {
+        entity.gotoLabel(label, varValueList);
     },
 
-    send: function (scope) {
-        scope.execute(entity);
+    send: function (scope, label, varValueList) {
+        var objects = scope.execute(entity);
+        for (var i = 0; i < objects.length; i++) {
+            objects[i].gotoLabel(label, varValueList);
+        }
     },
 
     set: function (varName, value) {
-        entity.variables[varName.replace('$', '')] = (value instanceof Expression) ? value.evaluate() : value;
+        var resolvedName = varName.replace('@', '').replace('$', '');
+        var resolvedValue = (value instanceof Expression) ? value.evaluate() : value;
+        if (varName.indexOf('@') === 0) {
+            entity.executingBlock.variables[resolvedName] = resolvedValue;
+        }
+        else if (varName.indexOf('$') === 0) {
+            entity.variables[resolvedName] = resolvedValue;
+        }
     },
 
     wait: function () {
@@ -642,23 +675,23 @@ PhysicsCommandSet.runCommands = function (entity) {
             var dy = 0;
             switch(dir) {
                 case 'n':
-                    dy = -4;
+                    dy = -8;
                     break;
                 case 's':
-                    dy = 4;
+                    dy = 8;
                     break;
                 case 'w':
-                    dx = -4;
+                    dx = -8;
                     break;
                 case 'e':
-                    dx = 4;
+                    dx = 8;
                     break;
                 case 'rnd':
                     var dir = Math.floor(Math.random() * 4);
-                    if      (dir === 0) { dy = -4; }
-                    else if (dir === 1) { dy = 4;  }
-                    else if (dir === 2) { dx = -4; }
-                    else                { dx = 4;  }
+                    if      (dir === 0) { dy = -8; }
+                    else if (dir === 1) { dy = 8;  }
+                    else if (dir === 2) { dx = -8; }
+                    else                { dx = 8;  }
                     break;
             }
             entity.commands.body.moveBy(dx, dy);
@@ -711,7 +744,7 @@ Entity.prototype.begin = function () {
     this.gotoLabel('_start');
 }
 
-Entity.prototype.gotoLabel = function (name) {
+Entity.prototype.gotoLabel = function (name, varValueList) {
     if (this.locked || !this.labels[name])
         return;
 
@@ -722,14 +755,15 @@ Entity.prototype.gotoLabel = function (name) {
     this.executingBlock = this.getBlock(blockRef.blockId); 
     this.executingBlock.reset();
     this.executingBlock.gotoOffset(blockRef.offset);
+    this.executingBlock.injectVariables(varValueList);
     this.executingBlockStack = [this.executingBlock];
 
     this.ended = false;
     this.cycleEnded = false;
 }
 
-Entity.prototype.createBlock = function () {
-    var block = new Block();
+Entity.prototype.createBlock = function (varDefList) {
+    var block = new Block(varDefList);
     this.blocks[block.id()] = block;
 
     return block;

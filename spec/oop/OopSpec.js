@@ -110,6 +110,27 @@ describe("Oop", function () {
 			});
 			board.execute();
 		});
+
+		it("should execute a label with block-scope arguments, as passed from the caller", function (done) {
+			board.setup(function () {
+				object('Player', function () {
+					jump('do', [1, 2])
+					end()
+					label('do', ['@param1', '@param2'])
+						set('@param1', expr('@param1 + 1'))
+						print(expr('@param1 + @param2'))
+					terminate()
+				});
+			});
+			board.run(function () {
+				spawn('Player')
+			});
+			board.finish(function () {
+				expect(console.history.toString()).toEqual([4].toString())
+				done();
+			});
+			board.execute();
+		});
 	});
 
 	describe("Control flow", function () {
@@ -455,6 +476,35 @@ describe("Oop", function () {
 			});
 			board.finish(function () {
 				expect(console.history.toString()).toEqual(['B', 'A', 'B2'].toString())
+				done();
+			});
+			board.execute();
+		});
+
+		it("should pass block-scope variables with a message", function (done) {
+			board.setup(function () {
+				object('Player', function () {
+					jump('do', ['a'])
+					end()
+					label('do', ['@param'])
+						print(expr('@param'))
+						send('Other', 'otherdo', [expr('1 + 1')])
+					end()
+				});
+
+				object('Other', function () {
+					end()
+					label('otherdo', ['@param'])
+						print(expr('@param'))
+					terminate()
+				});
+			});
+			board.run(function () {
+				spawn('Other')
+				spawn('Player')
+			});
+			board.finish(function () {
+				expect(console.history.toString()).toEqual(['a', 2].toString())
 				done();
 			});
 			board.execute();
