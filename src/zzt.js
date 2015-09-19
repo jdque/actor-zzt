@@ -574,8 +574,7 @@ PIXICommandSet.parseCommands = function (parser, entity) {
     var pixi = {
         set: parser._defaultParseFunc(entity.commands.pixi.set),
         color: parser._defaultParseFunc(entity.commands.pixi.color),
-        alpha: parser._defaultParseFunc(entity.commands.pixi.alpha),
-        moveBy: parser._defaultParseFunc(entity.commands.pixi.moveBy)
+        alpha: parser._defaultParseFunc(entity.commands.pixi.alpha)
     };
 
     return {
@@ -596,20 +595,15 @@ PIXICommandSet.runCommands = function (entity) {
 
         color: function (color) {
             if (entity.pixiObject) {
+                var color = color instanceof Expression ? color.evaluate() : color;
                 entity.pixiObject.tint = color || 0xFFFFFF;
             }
         },
 
         alpha: function (alpha) {
             if (entity.pixiObject) {
+                var alpha = alpha instanceof Expression ? alpha.evaluate() : alpha;
                 entity.pixiObject.alpha = alpha || 1;
-            }
-        },
-
-        moveBy: function (dx, dy) {
-            if (entity.pixiObject) {
-                entity.pixiObject.position.x += dx;
-                entity.pixiObject.position.y += dy;
             }
         }
     };
@@ -624,7 +618,8 @@ PhysicsCommandSet = {};
 PhysicsCommandSet.parseCommands = function (parser, entity) {
     var body = {
         set: parser._defaultParseFunc(entity.commands.body.set),
-        moveBy: parser._defaultParseFunc(entity.commands.body.moveBy),
+        move_to: parser._defaultParseFunc(entity.commands.body.move_to),
+        move_by: parser._defaultParseFunc(entity.commands.body.move_by),
 
         move: function (dirStr) {
             var dirs = dirStr.split('/');
@@ -654,9 +649,29 @@ PhysicsCommandSet.runCommands = function (entity) {
             entity.body.spatial.register(entity);
         },
 
-        moveBy: function (dx, dy) {
+        move_to: function (x, y) {
             if (!entity.body)
                 return;
+
+            var x = x instanceof Expression ? x.evaluate() : x;
+            var y = y instanceof Expression ? y.evaluate() : y;
+
+            entity.body.bounds.x = x;
+            entity.body.bounds.y = y;
+            entity.body.spatial.update(entity);
+
+            if (entity.pixiObject) {
+                entity.pixiObject.position.x = entity.body.bounds.x;
+                entity.pixiObject.position.y = entity.body.bounds.y;
+            }
+        },
+
+        move_by: function (dx, dy) {
+            if (!entity.body)
+                return;
+
+            var dx = dx instanceof Expression ? dx.evaluate() : dx;
+            var dy = dy instanceof Expression ? dy.evaluate() : dy;
 
             var objs = entity.body.spatial.getIntersect(entity.body.bounds, dx, dy);
             if (objs.length <= 1) {
@@ -696,7 +711,7 @@ PhysicsCommandSet.runCommands = function (entity) {
                     else                { dx = 8;  }
                     break;
             }
-            entity.commands.body.moveBy(dx, dy);
+            entity.commands.body.move_by(dx, dy);
         }
     };
 

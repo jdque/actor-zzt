@@ -583,9 +583,10 @@ function initialize() {
 
         window.board = new Board();
         board.setup(function () {
-            object('Player', function () {
-                adopt('body', { bounds: new PIXI.Rectangle(640 / 2, 480 / 2, 16, 16), spatial: spatial})
+            object('Player', ['@x', '@y'], function () {
+                adopt('body', { bounds: new PIXI.Rectangle(0, 0, 16, 16), spatial: spatial})
                 adopt('pixi', sprites.player)
+                body.move_to(expr('@x'), expr('@y'))
                 pixi.color(0x0000FF)
                 jump('move')
                 end()
@@ -612,9 +613,10 @@ function initialize() {
                 end()
             });
 
-            object('Enemy', function () {
-                adopt('body', { bounds: new PIXI.Rectangle(Math.floor(Math.random() * 640 / 8) * 8, Math.floor(Math.random() * 480 / 8) * 8, sprites.enemy.width * 8, sprites.enemy.height * 8), spatial: spatial})
+            object('Enemy', ['@x', '@y'], function () {
+                adopt('body', { bounds: new PIXI.Rectangle(0, 0, 24, 24), spatial: spatial})
                 adopt('pixi', sprites.enemy)
+                body.move_to(expr('@x'), expr('@y'))
                 pixi.color(0xFF0000)
                 pixi.alpha(0.5)
                 jump('move')
@@ -628,9 +630,9 @@ function initialize() {
         });
         board.run(function () {
             loop(300)
-                spawn('Enemy')
+                spawn('Enemy', [expr('Math.floor(Math.random() * 640 / 8) * 8'), expr('Math.floor(Math.random() * 480 / 8) * 8')])
             endloop()
-            spawn('Player')
+            spawn('Player', [640 / 2, 480 / 2])
         });
         board.execute();
 
