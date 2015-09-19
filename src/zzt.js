@@ -137,16 +137,16 @@ Block.prototype.execNext = function () {
     return true;
 }
 
-Block.prototype.injectVariables = function (varValueList) {
-    if (!varValueList)
+Block.prototype.injectArguments = function (varArgs) {
+    if (!varArgs)
         return;
 
-    for (var i = 0; i < varValueList.length; i++) {
+    for (var i = 0; i < varArgs.length; i++) {
         if (i > this.variableDefs.length - 1) {
             continue;
         }
         var varName = this.variableDefs[i].replace('\@', '');
-        var value = varValueList[i];
+        var value = varArgs[i];
         this.variables[varName] = (value instanceof Expression) ? value.evaluate() : value;
     }
 }
@@ -390,8 +390,8 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         parser.commands.endloop();
     },
 
-    send: function (scopeStr, label, varValueList) {
-        parser.currentBlock.add(entity.commands.send.bind(entity, new Scope(scopeStr), label, varValueList));
+    send: function (scopeStr, label, varArgs) {
+        parser.currentBlock.add(entity.commands.send.bind(entity, new Scope(scopeStr), label, varArgs));
     },
 
     adopt: function (moduleName, initParams) {
@@ -466,14 +466,14 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.cycleEnded = true;
     },
 
-    jump: function (label, varValueList) {
-        entity.gotoLabel(label, varValueList);
+    jump: function (label, varArgs) {
+        entity.gotoLabel(label, varArgs);
     },
 
-    send: function (scope, label, varValueList) {
+    send: function (scope, label, varArgs) {
         var objects = scope.execute(entity);
         for (var i = 0; i < objects.length; i++) {
-            objects[i].gotoLabel(label, varValueList);
+            objects[i].gotoLabel(label, varArgs);
         }
     },
 
@@ -744,7 +744,7 @@ Entity.prototype.begin = function () {
     this.gotoLabel('_start');
 }
 
-Entity.prototype.gotoLabel = function (name, varValueList) {
+Entity.prototype.gotoLabel = function (name, varArgs) {
     if (this.locked || !this.labels[name])
         return;
 
@@ -755,7 +755,7 @@ Entity.prototype.gotoLabel = function (name, varValueList) {
     this.executingBlock = this.getBlock(blockRef.blockId); 
     this.executingBlock.reset();
     this.executingBlock.gotoOffset(blockRef.offset);
-    this.executingBlock.injectVariables(varValueList);
+    this.executingBlock.injectArguments(varArgs);
     this.executingBlockStack = [this.executingBlock];
 
     this.ended = false;
