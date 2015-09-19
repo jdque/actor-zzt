@@ -98,10 +98,10 @@ Scope.prototype.execute = function (entity) {
     return this.scopeFunc(entity, this.children, this.parent, this.board) || [];
 }
 
-Block = function (varDefList) {
+Block = function (varParams) {
     this._id = Util.generateId().toString();
     this.commands = [];
-    this.variableDefs = varDefList || [];
+    this.variableParams = varParams || [];
     this.variables = {};
     this.index = -1;
 }
@@ -142,10 +142,10 @@ Block.prototype.injectArguments = function (varArgs) {
         return;
 
     for (var i = 0; i < varArgs.length; i++) {
-        if (i > this.variableDefs.length - 1) {
+        if (i > this.variableParams.length - 1) {
             continue;
         }
-        var varName = this.variableDefs[i].replace('\@', '');
+        var varName = this.variableParams[i].replace('\@', '');
         var value = varArgs[i];
         this.variables[varName] = (value instanceof Expression) ? value.evaluate() : value;
     }
@@ -312,11 +312,11 @@ Parser.prototype.parse = function () {
         commands += 'var ' + name + ' = this.commands.' + name + ';';
     });
 
-    var varDefList = '["' + this.entity.initVarDefList.join('","') + '"]';
+    var varParams = '["' + this.entity.initVarParams.join('","') + '"]';
 
     (new Function(
         commands +
-        'label("_start", ' + varDefList + ');' +
+        'label("_start", ' + varParams + ');' +
         this.entity.script.toString().replace("function ()", "") + ";" +
         'end();'
     )).call(this);
@@ -329,9 +329,9 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         return new Expression(expr, entity);
     },
 
-    label: function (name, varDefList) {
+    label: function (name, varParams) {
         if (parser.blockStack.length === 0) {
-            var block = entity.createBlock(varDefList);
+            var block = entity.createBlock(varParams);
             parser.parseNewBlock(block);
         }
 
@@ -705,7 +705,7 @@ PhysicsCommandSet.runCommands = function (entity) {
     };
 };
 
-Entity = function (board, name, script, initVarDefList) {
+Entity = function (board, name, script, initVarParams) {
     //Properties
     this.id = Util.generateId().toString();
     this.board = board;
@@ -713,7 +713,7 @@ Entity = function (board, name, script, initVarDefList) {
     this.script = script;
     this.depth = 0;
     this.parent = null;
-    this.initVarDefList = initVarDefList || [];
+    this.initVarParams = initVarParams || [];
 
     //State
     this.variables = {};
@@ -765,8 +765,8 @@ Entity.prototype.gotoLabel = function (name, varArgs) {
     this.cycleEnded = false;
 }
 
-Entity.prototype.createBlock = function (varDefList) {
-    var block = new Block(varDefList);
+Entity.prototype.createBlock = function (varParams) {
+    var block = new Block(varParams);
     this.blocks[block.id()] = block;
 
     return block;
@@ -903,17 +903,17 @@ Board.prototype.getEntity = function () {
     return this.boardEntity;
 }
 
-Board.prototype.defineObject = function (name, varDefListOrScript, script) {
+Board.prototype.defineObject = function (name, varParamsOrScript, script) {
     if (this.objects[name]) {
         throw "Duplicate object definition";
     }
 
     var obj;
     if (arguments.length === 3) {
-        obj = new Entity(this, name, script, varDefListOrScript);
+        obj = new Entity(this, name, script, varParamsOrScript);
     }
     else if (arguments.length === 2) {
-        obj = new Entity(this, name, varDefListOrScript, []);
+        obj = new Entity(this, name, varParamsOrScript, []);
     }
     else {
         throw "Bad object definition";
@@ -933,7 +933,7 @@ Board.prototype.spawnObject = function (name, parent, initVarArgs) {
             this.instances.push({});
     }
 
-    var obj = new Entity(this, this.objects[name].name, this.objects[name].script, this.objects[name].initVarDefList);
+    var obj = new Entity(this, this.objects[name].name, this.objects[name].script, this.objects[name].initVarParams);
     obj.depth = parent ? parent.depth + 1 : 0;
     obj.parent = parent || obj;
     obj.parser.parse();
