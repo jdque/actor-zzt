@@ -711,9 +711,9 @@ Entity = function (board, name, script, initVarParams) {
     this.board = board;
     this.name = name;
     this.script = script;
+    this.initVarParams = initVarParams || [];
     this.depth = 0;
     this.parent = null;
-    this.initVarParams = initVarParams || [];
 
     //State
     this.variables = {};
@@ -740,6 +740,10 @@ Entity = function (board, name, script, initVarParams) {
     this.parser.addModule('html');
     this.parser.addModule('pixi');
     this.parser.addModule('body');
+}
+
+Entity.clone = function (entity) {
+    return new Entity(entity.board, entity.name, entity.script, entity.initVarParams);
 }
 
 Entity.prototype.begin = function (initVarArgs) {
@@ -933,7 +937,7 @@ Board.prototype.spawnObject = function (name, parent, initVarArgs) {
             this.instances.push({});
     }
 
-    var obj = new Entity(this, this.objects[name].name, this.objects[name].script, this.objects[name].initVarParams);
+    var obj = Entity.clone(this.objects[name]);
     obj.depth = parent ? parent.depth + 1 : 0;
     obj.parent = parent || obj;
     obj.parser.parse();
