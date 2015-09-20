@@ -350,16 +350,19 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     },
 
     if: function (condition) {
+        var condition = typeof condition === 'string' ? new Expression(condition, entity) : condition;
         var block = new IfBlock();
 
         parser.currentBlock.add(entity.runBlock.bind(entity, block));
         parser.parseNewBlock(block);
-        parser.currentBlock.addBranch(entity.commands.if.bind(entity, new Expression(condition, entity)));
+        parser.currentBlock.addBranch(entity.commands.if.bind(entity, condition));
     },
 
     elif: function (condition) {
+        var condition = typeof condition === 'string' ? new Expression(condition, entity) : condition;
+
         parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
-        parser.currentBlock.addBranch(entity.commands.elif.bind(entity, new Expression(condition, entity)));
+        parser.currentBlock.addBranch(entity.commands.elif.bind(entity, condition));
     },
 
     else: function () {
@@ -720,6 +723,52 @@ PhysicsCommandSet.runCommands = function (entity) {
     };
 };
 
+InputCommandSet = {};
+
+InputCommandSet.parseCommands = function (parser, entity) {
+    var input = {
+        key_down: function (keyCode) {
+            var keyCode = keyCode instanceof Expression ? keyCode.evaluate() : keyCode;
+            var expr = "this.input.downKeys.indexOf({keyCode}) !== -1".replace('{keyCode}', keyCode);
+            return new Expression(expr, entity);
+        }
+    };
+
+    return {
+        input: input
+    };
+};
+
+InputCommandSet.runCommands = function (entity) {
+    var input = {
+        __init__: function (params) {
+            entity.input = {
+                downKeys: []
+            };
+
+            document.addEventListener('keydown', function (e) {
+                if (entity.input.downKeys.indexOf(e.keyCode) === -1) {
+                    entity.input.downKeys.push(e.keyCode);
+                }
+                entity.gotoLabel('@input.key_down');
+            });
+
+            document.addEventListener('keyup', function (e) {
+                var keyIdx = entity.input.downKeys.indexOf(e.keyCode);
+                if (keyIdx !== -1) {
+                    entity.input.downKeys[keyIdx] = entity.input.downKeys[entity.input.downKeys.length - 1];
+                    entity.input.downKeys.pop();
+                }
+                entity.gotoLabel('@input.key_up');
+            });
+        }
+    };
+
+    return {
+        input: input
+    };
+};
+
 Entity = function (board, name, script, initVarParams) {
     //Properties
     this.id = Util.generateId().toString();
@@ -752,9 +801,11 @@ Entity = function (board, name, script, initVarParams) {
     this.parser.registerModule('html', DOMCommandSet);
     this.parser.registerModule('pixi', PIXICommandSet);
     this.parser.registerModule('body', PhysicsCommandSet);
+    this.parser.registerModule('input', InputCommandSet);
     this.parser.addModule('html');
     this.parser.addModule('pixi');
     this.parser.addModule('body');
+    this.parser.addModule('input');
 }
 
 Entity.clone = function (entity) {

@@ -586,12 +586,25 @@ function initialize() {
             object('Player', ['@x', '@y'], function () {
                 adopt('body', { bounds: new PIXI.Rectangle(0, 0, 16, 16), spatial: spatial})
                 adopt('pixi', sprites.player)
+                adopt('input')
                 body.move_to(expr('@x'), expr('@y'))
                 pixi.color(0x0000FF)
                 jump('move')
                 end()
 
                 label('move')
+                    _if(input.key_down(38))
+                        body.move('/n')
+                    _elif(input.key_down(40))
+                        body.move('/s')
+                    _endif()
+
+                    _if(input.key_down(37))
+                        body.move('/w')
+                    _elif(input.key_down(39))
+                        body.move('/e')
+                    _endif()
+
                     exec(function (entity) {
                         var all = entity.body.spatial.query().all().get();
                         all.forEach(function (obj) {
@@ -608,7 +621,7 @@ function initialize() {
                             obj.pixiObject.tint = 0xFFFFFF;
                         });
                     })
-                    wait(5)
+                    wait(1)
                     jump('move')
                 end()
             });
@@ -629,7 +642,7 @@ function initialize() {
             });
         });
         board.run(function () {
-            loop(300)
+            loop(100)
                 spawn('Enemy', [expr('Math.floor(Math.random() * 640 / 8) * 8'), expr('Math.floor(Math.random() * 480 / 8) * 8')])
             endloop()
             spawn('Player', [640 / 2, 480 / 2])
