@@ -26,14 +26,14 @@ Evaluable = function () {
 Evaluable.evaluate = function () {
 }
 
-FunctionExpression = function (func, entity) {
+DeferredFunction = function (func, entity) {
     this.entity = entity;
     this.func = func;
 }
 
-FunctionExpression.prototype = Object.create(Evaluable.prototype);
+DeferredFunction.prototype = Object.create(Evaluable.prototype);
 
-FunctionExpression.prototype.evaluate = function () {
+DeferredFunction.prototype.evaluate = function () {
     return this.func.call(this.entity);
 }
 
@@ -672,7 +672,7 @@ PhysicsCommandSet.getDirectionDelta = function (dir, entity) {
 PhysicsCommandSet.parseCommands = function (parser, entity) {
     var body = {
         blocked: function (dir) {
-            return new FunctionExpression(function () {
+            return new DeferredFunction(function () {
                 var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
                 var objs = entity.body.spatial.getIntersect(entity.body.bounds, delta.dx, delta.dy);
                 return objs.length > 1;
@@ -766,7 +766,7 @@ InputCommandSet = {};
 InputCommandSet.parseCommands = function (parser, entity) {
     var input = {
         key_down: function (keyCode) {
-            return new FunctionExpression(function () {
+            return new DeferredFunction(function () {
                 var _keyCode = keyCode instanceof Evaluable ? keyCode.evaluate() : keyCode;
                 return this.input.downKeys.indexOf(_keyCode) !== -1;
             }, entity);
