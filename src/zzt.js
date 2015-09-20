@@ -541,7 +541,6 @@ DOMCommandSet = {};
 
 DOMCommandSet.parseCommands = function (parser, entity) {
     var html = {
-        set: parser._defaultParseFunc(entity.commands.html.set),
         exec: parser._defaultParseFunc(entity.commands.html.exec),
     };
 
@@ -575,7 +574,6 @@ PIXICommandSet = {};
 
 PIXICommandSet.parseCommands = function (parser, entity) {
     var pixi = {
-        set: parser._defaultParseFunc(entity.commands.pixi.set),
         color: parser._defaultParseFunc(entity.commands.pixi.color),
         alpha: parser._defaultParseFunc(entity.commands.pixi.alpha)
     };
@@ -620,7 +618,6 @@ PhysicsCommandSet = {};
 
 PhysicsCommandSet.parseCommands = function (parser, entity) {
     var body = {
-        set: parser._defaultParseFunc(entity.commands.body.set),
         move_to: parser._defaultParseFunc(entity.commands.body.move_to),
         move_by: parser._defaultParseFunc(entity.commands.body.move_by),
 
