@@ -578,6 +578,11 @@ function initialize() {
                         219, 219, 219],
                 width: 3, height: 3,
                 x: 0, y: 0
+            },
+            bullet: {
+                tiles: [7],
+                width: 1, height: 1,
+                x: 0, y: 0
             }
         }
 
@@ -605,8 +610,12 @@ function initialize() {
                         body.move('/e')
                     _endif()
 
+                    _if(input.key_down(32))
+                        send('[parent]', 'shoot', [expr('this.body.bounds.x + this.body.bounds.width'), expr('this.body.bounds.y'), "e"])
+                        wait(5)
+                    _endif()
+
                     _if(body.blocked('flow'))
-                        print("THUD")
                         body.move('/i')
                     _endif()
 
@@ -645,12 +654,39 @@ function initialize() {
                     jump('move')
                 end()
             });
+
+            object('Bullet', ['@x', '@y', '@dir'], function () {
+                adopt('body', { bounds: new PIXI.Rectangle(0, 0, 8, 8), spatial: spatial})
+                adopt('pixi', sprites.bullet)
+                body.move_to(expr('@x'), expr('@y'))
+                set('$dir', expr('@dir'))
+                _if('$dir === "e"')
+                    body.move('/e')
+                _endif()
+                jump('loop')
+
+                label('loop')
+                    _if(body.blocked('flow'))
+                        jump('stop')
+                    _endif()
+                    body.move('/flow')
+                    jump('loop')
+                end()
+
+                label('stop')
+                end()
+            })
         });
         board.run(function () {
             loop(100)
                 spawn('Enemy', [expr('Math.floor(Math.random() * 640 / 8) * 8'), expr('Math.floor(Math.random() * 480 / 8) * 8')])
             endloop()
             spawn('Player', [640 / 2, 480 / 2])
+            end()
+
+            label('shoot', ['@x', '@y', '@dir'])
+                spawn('Bullet', [expr('@x'), expr('@y'), expr('@dir')])
+            end()
         });
         board.execute();
 
