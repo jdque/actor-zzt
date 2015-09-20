@@ -40,7 +40,7 @@ FunctionExpression.prototype.evaluate = function () {
 Expression = function (expr, entity) {
     this.entity = entity;
     this.expr = new Function(
-        'return ' + expr.replace(/\@/g, 'this.executingBlock.variables.').replace(/\$/g, 'this.variables.')
+        'return ' + expr.replace(/\@/g, 'this.executingLabelBlock.variables.').replace(/\$/g, 'this.variables.')
     );
 }
 
@@ -442,6 +442,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
 DefaultCommandSet.runCommands = function (entity) { return {
     end: function () {
         entity.ended = true;
+        entity.executingLabelBlock = null;
         entity.executingBlock = null;
         entity.executingBlockStack = [];
     },
@@ -827,6 +828,7 @@ Entity = function (board, name, script, initVarParams) {
     this.labels = {};
     this.blocks = [];
     this.commands = {};
+    this.executingLabelBlock = null;
     this.executingBlock = null;
     this.executingBlockStack = [];
 
@@ -863,10 +865,12 @@ Entity.prototype.gotoLabel = function (name, varArgs) {
         return;
 
     var blockRef = this.labels[name].getActiveBlockRef();
-    this.executingBlock = this.getBlock(blockRef.blockId); 
-    this.executingBlock.reset();
-    this.executingBlock.gotoOffset(blockRef.offset);
-    this.executingBlock.injectArguments(varArgs);
+    this.executingLabelBlock = this.getBlock(blockRef.blockId);
+    this.executingLabelBlock.reset();
+    this.executingLabelBlock.gotoOffset(blockRef.offset);
+    this.executingLabelBlock.injectArguments(varArgs);
+
+    this.executingBlock = this.executingLabelBlock;
     this.executingBlockStack = [this.executingBlock];
 
     this.ended = false;

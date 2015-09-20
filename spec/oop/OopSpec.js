@@ -135,7 +135,11 @@ describe("Oop", function () {
 		it("should spawn objects with initialization variables", function (done) {
 			board.setup(function () {
 				object('Player', ['@param'], function () {
-					print(expr('@param'))
+					_if('@param === 1')
+						_if('@param === 1')
+							print(expr('@param'))
+						_endif()
+					_endif()
 					spawn('Child', [2, 3])
 					end()
 				});
