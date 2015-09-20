@@ -20,12 +20,31 @@ Util = (function () {
     };
 })();
 
+Evaluable = function () {
+}
+
+Evaluable.evaluate = function () {
+}
+
+FunctionExpression = function (func, entity) {
+    this.entity = entity;
+    this.func = func;
+}
+
+FunctionExpression.prototype = Object.create(Evaluable.prototype);
+
+FunctionExpression.prototype.evaluate = function () {
+    return this.func.call(this.entity);
+}
+
 Expression = function (expr, entity) {
     this.entity = entity;
     this.expr = new Function(
         'return ' + expr.replace(/\@/g, 'this.executingBlock.variables.').replace(/\$/g, 'this.variables.')
     );
 }
+
+Expression.prototype = Object.create(Evaluable.prototype);
 
 Expression.prototype.evaluate = function () {
     return this.expr.call(this.entity);
@@ -147,7 +166,7 @@ Block.prototype.injectArguments = function (varArgs) {
         }
         var varName = this.variableParams[i].replace('\@', '');
         var value = varArgs[i];
-        this.variables[varName] = (value instanceof Expression) ? value.evaluate() : value;
+        this.variables[varName] = (value instanceof Evaluable) ? value.evaluate() : value;
     }
 }
 
@@ -194,7 +213,7 @@ LoopBlock.prototype = Object.create(Block.prototype);
 LoopBlock.prototype.reset = function () {
     Block.prototype.reset.apply(this);
     this.currentCount = 0;
-    this.execCount = this.count instanceof Expression ? this.count.evaluate() : this.count;
+    this.execCount = this.count instanceof Evaluable ? this.count.evaluate() : this.count;
 }
 
 LoopBlock.prototype.iterate = function () {
@@ -466,7 +485,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
     },
 
     print: function (text) {
-        var printText = (text instanceof Expression) ? text.evaluate() : text;
+        var printText = (text instanceof Evaluable) ? text.evaluate() : text;
         console.log(printText);
         entity.cycleEnded = true;
     },
@@ -484,7 +503,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
 
     set: function (varName, value) {
         var resolvedName = varName.replace('@', '').replace('$', '');
-        var resolvedValue = (value instanceof Expression) ? value.evaluate() : value;
+        var resolvedValue = (value instanceof Evaluable) ? value.evaluate() : value;
         if (varName.indexOf('@') === 0) {
             entity.executingBlock.variables[resolvedName] = resolvedValue;
         }
@@ -596,14 +615,14 @@ PIXICommandSet.runCommands = function (entity) {
 
         color: function (color) {
             if (entity.pixiObject) {
-                var color = color instanceof Expression ? color.evaluate() : color;
+                var color = color instanceof Evaluable ? color.evaluate() : color;
                 entity.pixiObject.tint = color || 0xFFFFFF;
             }
         },
 
         alpha: function (alpha) {
             if (entity.pixiObject) {
-                var alpha = alpha instanceof Expression ? alpha.evaluate() : alpha;
+                var alpha = alpha instanceof Evaluable ? alpha.evaluate() : alpha;
                 entity.pixiObject.alpha = alpha || 1;
             }
         }
@@ -616,8 +635,49 @@ PIXICommandSet.runCommands = function (entity) {
 
 PhysicsCommandSet = {};
 
+PhysicsCommandSet.getDirectionDelta = function (dir, entity) {
+    var dx = 0;
+    var dy = 0;
+
+    if (dir === 'flow') {
+        return entity.body.lastDelta;
+    }
+
+    switch(dir) {
+        case 'n':
+            dy = -8;
+            break;
+        case 's':
+            dy = 8;
+            break;
+        case 'w':
+            dx = -8;
+            break;
+        case 'e':
+            dx = 8;
+            break;
+        case 'rnd':
+            var dir = Math.floor(Math.random() * 4);
+            if      (dir === 0) { dy = -8; }
+            else if (dir === 1) { dy = 8;  }
+            else if (dir === 2) { dx = -8; }
+            else                { dx = 8;  }
+            break;
+    }
+
+    return {dx: dx, dy: dy};
+}
+
 PhysicsCommandSet.parseCommands = function (parser, entity) {
     var body = {
+        blocked: function (dir) {
+            return new FunctionExpression(function () {
+                var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
+                var objs = entity.body.spatial.getIntersect(entity.body.bounds, delta.dx, delta.dy);
+                return objs.length > 1;
+            }, entity);
+        },
+
         move_to: parser._defaultParseFunc(entity.commands.body.move_to),
         move_by: parser._defaultParseFunc(entity.commands.body.move_by),
 
@@ -643,7 +703,8 @@ PhysicsCommandSet.runCommands = function (entity) {
         __init__: function (params) {
             entity.body = {
                 bounds: params.bounds,
-                spatial: params.spatial
+                spatial: params.spatial,
+                lastDelta: {dx: 0, dy: 0}
             };
 
             entity.body.spatial.register(entity);
@@ -653,8 +714,8 @@ PhysicsCommandSet.runCommands = function (entity) {
             if (!entity.body)
                 return;
 
-            var x = x instanceof Expression ? x.evaluate() : x;
-            var y = y instanceof Expression ? y.evaluate() : y;
+            var x = x instanceof Evaluable ? x.evaluate() : x;
+            var y = y instanceof Evaluable ? y.evaluate() : y;
 
             entity.body.bounds.x = x;
             entity.body.bounds.y = y;
@@ -670,8 +731,8 @@ PhysicsCommandSet.runCommands = function (entity) {
             if (!entity.body)
                 return;
 
-            var dx = dx instanceof Expression ? dx.evaluate() : dx;
-            var dy = dy instanceof Expression ? dy.evaluate() : dy;
+            var dx = dx instanceof Evaluable ? dx.evaluate() : dx;
+            var dy = dy instanceof Evaluable ? dy.evaluate() : dy;
 
             var objs = entity.body.spatial.getIntersect(entity.body.bounds, dx, dy);
             if (objs.length <= 1) {
@@ -688,30 +749,9 @@ PhysicsCommandSet.runCommands = function (entity) {
         },
 
         move: function (dir) {
-            var dx = 0;
-            var dy = 0;
-            switch(dir) {
-                case 'n':
-                    dy = -8;
-                    break;
-                case 's':
-                    dy = 8;
-                    break;
-                case 'w':
-                    dx = -8;
-                    break;
-                case 'e':
-                    dx = 8;
-                    break;
-                case 'rnd':
-                    var dir = Math.floor(Math.random() * 4);
-                    if      (dir === 0) { dy = -8; }
-                    else if (dir === 1) { dy = 8;  }
-                    else if (dir === 2) { dx = -8; }
-                    else                { dx = 8;  }
-                    break;
-            }
-            entity.commands.body.move_by(dx, dy);
+            var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
+            entity.commands.body.move_by(delta.dx, delta.dy);
+            entity.body.lastDelta = delta;
         }
     };
 
@@ -725,9 +765,10 @@ InputCommandSet = {};
 InputCommandSet.parseCommands = function (parser, entity) {
     var input = {
         key_down: function (keyCode) {
-            var keyCode = keyCode instanceof Expression ? keyCode.evaluate() : keyCode;
-            var expr = "this.input.downKeys.indexOf({keyCode}) !== -1".replace('{keyCode}', keyCode);
-            return new Expression(expr, entity);
+            return new FunctionExpression(function () {
+                var _keyCode = keyCode instanceof Evaluable ? keyCode.evaluate() : keyCode;
+                return this.input.downKeys.indexOf(_keyCode) !== -1;
+            }, entity);
         }
     };
 

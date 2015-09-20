@@ -605,6 +605,11 @@ function initialize() {
                         body.move('/e')
                     _endif()
 
+                    _if(body.blocked('flow'))
+                        print("THUD")
+                        body.move('/i')
+                    _endif()
+
                     exec(function (entity) {
                         var all = entity.body.spatial.query().all().get();
                         all.forEach(function (obj) {
