@@ -276,8 +276,6 @@ LabelBlockGroup.prototype.enablePreviousBlockRef = function () {
 }
 
 Parser = function (entity) {
-    this.entity = entity;
-    this.commands = {};
     this.currentBlock = null;
     this.blockStack = [];
 
@@ -296,8 +294,6 @@ Parser.prototype.addModule = function (name) {
     }
 
     this.addedModules.push(name);
-    Util.extend(this.entity.commands, moduleObj.runCommands.call(null, this.entity));
-    Util.extend(this.commands, moduleObj.parseCommands.call(null, this, this.entity));
 }
 
 Parser.prototype.parseNewBlock = function (block) {
@@ -316,8 +312,16 @@ Parser.prototype._defaultParseFunc = function (runCommand) {
     }.bind(this);
 }
 
-Parser.prototype.parse = function () {
-    var commands =
+Parser.prototype.parse = function (entity) {
+    this.entity = entity;
+    this.entity.commands = {};
+    this.commands = {};
+
+    var commands = "";
+
+    Util.extend(this.entity.commands, DefaultCommandSet.runCommands.call(null, this.entity));
+    Util.extend(this.commands, DefaultCommandSet.parseCommands.call(null, this, this.entity));
+    commands +=
         'var val       = this.commands.val;' +
         'var expr      = this.commands.expr;' +
         'var label     = this.commands.label;' +
@@ -345,8 +349,11 @@ Parser.prototype.parse = function () {
         'var adopt     = this.commands.adopt;';
 
     this.addedModules.forEach(function (name) {
+        var moduleObj = this.modules[name];
+        Util.extend(this.entity.commands, moduleObj.runCommands.call(null, this.entity));
+        Util.extend(this.commands, moduleObj.parseCommands.call(null, this, this.entity));
         commands += 'var ' + name + ' = this.commands.' + name + ';';
-    });
+    }.bind(this));
 
     var varParams = '["' + this.entity.initVarParams.join('","') + '"]';
 
@@ -356,6 +363,9 @@ Parser.prototype.parse = function () {
         this.entity.script.toString().replace("function ()", "") + ";" +
         'end();'
     )).call(this);
+
+    this.entity = null;
+    this.commands = {};
 }
 
 DefaultCommandSet = {};
@@ -852,21 +862,6 @@ Entity = function (board, name, script, initVarParams) {
     this.executingLabelBlock = null;
     this.executingBlock = null;
     this.executingBlockStack = [];
-
-    //Parsing
-    this.parser = new Parser(this);
-
-    Util.extend(this.commands, DefaultCommandSet.runCommands.call(null, this));
-    Util.extend(this.parser.commands, DefaultCommandSet.parseCommands.call(null, this.parser, this));
-
-    this.parser.registerModule('html', DOMCommandSet);
-    this.parser.registerModule('pixi', PIXICommandSet);
-    this.parser.registerModule('body', PhysicsCommandSet);
-    this.parser.registerModule('input', InputCommandSet);
-    this.parser.addModule('html');
-    this.parser.addModule('pixi');
-    this.parser.addModule('body');
-    this.parser.addModule('input');
 }
 
 Entity.clone = function (entity) {
@@ -985,7 +980,7 @@ Board.prototype.execute = function () {
     this.boardEntity = new Entity(this, "_board", this.runScript, []);
     this.boardEntity.depth = 0;
     this.boardEntity.parent = this.boardEntity;
-    this.boardEntity.parser.parse();
+    DefaultParser.parse(this.boardEntity);
     this.boardEntity.begin();
     this.instances[0]["_board"] = [];
     this.instances[0]["_board"].push(this.boardEntity);
@@ -1069,7 +1064,7 @@ Board.prototype.spawnObject = function (name, parent, initVarArgs) {
     var obj = Entity.clone(this.objects[name]);
     obj.depth = parent ? parent.depth + 1 : 0;
     obj.parent = parent || obj;
-    obj.parser.parse();
+    DefaultParser.parse(obj);
     obj.begin(initVarArgs);
 
     this.spawnedObjs.push(obj);
@@ -1117,6 +1112,15 @@ Board.prototype.terminate = function () {
     this.terminated = true;
 }
 
+var DefaultParser = new Parser();
+DefaultParser.registerModule('html', DOMCommandSet);
+DefaultParser.registerModule('pixi', PIXICommandSet);
+DefaultParser.registerModule('body', PhysicsCommandSet);
+DefaultParser.registerModule('input', InputCommandSet);
+DefaultParser.addModule('html');
+DefaultParser.addModule('pixi');
+DefaultParser.addModule('body');
+DefaultParser.addModule('input');
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = {
