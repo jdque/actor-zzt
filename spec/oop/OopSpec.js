@@ -89,15 +89,15 @@ describe("Oop", function () {
 			board.setup(function () {
 				object('Player', function () {
 					set('$var', 'a')
-					print(expr('$var'))
+					print(val('$var'))
 					set('$var', 1)
-					print(expr('$var'))
+					print(val('$var'))
 					set('$var', expr('$var + 1'))
-					print(expr('$var'))
+					print(val('$var'))
 					set('$var', expr('1 === 1'))
-					print(expr('$var'))
+					print(val('$var'))
 					set('$var', expr('(Math.cos(0) + 1) * parseFloat("0.75")'))
-					print(expr('$var'))
+					print(val('$var'))
 					terminate()
 				});
 			});
@@ -137,7 +137,7 @@ describe("Oop", function () {
 				object('Player', ['@param'], function () {
 					_if('@param === 1')
 						_if('@param === 1')
-							print(expr('@param'))
+							print(val('@param'))
 						_endif()
 					_endif()
 					spawn('Child', [2, 3])
@@ -204,7 +204,7 @@ describe("Oop", function () {
 				object('Player', function () {
 					set('$var', 3)
 					loop('$var')
-						print(expr('$var'))
+						print(val('$var'))
 						set('$var', expr('$var - 1'))
 					endloop()
 					terminate()
@@ -361,7 +361,7 @@ describe("Oop", function () {
 					label('label')
 					label('label')
 					label('label')
-						print(expr('$var'))
+						print(val('$var'))
 						set('$var', expr('$var + 1'))
 						zap('label')
 						jump('label')
@@ -515,7 +515,7 @@ describe("Oop", function () {
 					jump('do', ['a'])
 					end()
 					label('do', ['@param'])
-						print(expr('@param'))
+						print(val('@param'))
 						send('Other', 'otherdo', [expr('1 + 1')])
 					end()
 				});
@@ -523,7 +523,7 @@ describe("Oop", function () {
 				object('Other', function () {
 					end()
 					label('otherdo', ['@param'])
-						print(expr('@param'))
+						print(val('@param'))
 					terminate()
 				});
 			});

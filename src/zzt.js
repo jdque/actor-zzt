@@ -37,6 +37,22 @@ DeferredFunction.prototype.evaluate = function () {
     return this.func.call(this.entity);
 }
 
+Value = function (varStr, entity) {
+    this.entity = entity;
+    this.varStr = varStr;
+}
+
+Value.prototype = Object.create(Evaluable.prototype);
+
+Value.prototype.evaluate = function () {
+    if (this.varStr[0] === '@') {
+        return this.entity.executingLabelBlock.variables[this.varStr.substr(1)];
+    }
+    else if (this.varStr[0] === '$') {
+        return this.entity.variables[this.varStr.substr(1)];
+    }
+}
+
 Expression = function (expr, entity) {
     this.entity = entity;
     this.expr = new Function(
@@ -302,6 +318,7 @@ Parser.prototype._defaultParseFunc = function (runCommand) {
 
 Parser.prototype.parse = function () {
     var commands =
+        'var val       = this.commands.val;' +
         'var expr      = this.commands.expr;' +
         'var label     = this.commands.label;' +
         'var end       = this.commands.end;' +
@@ -344,6 +361,10 @@ Parser.prototype.parse = function () {
 DefaultCommandSet = {};
 
 DefaultCommandSet.parseCommands = function (parser, entity) { return {
+    val: function (varStr) {
+        return new Value(varStr, entity);
+    },
+
     expr: function (expr) {
         return new Expression(expr, entity);
     },

@@ -592,7 +592,7 @@ function initialize() {
                 adopt('body', { bounds: new PIXI.Rectangle(0, 0, 16, 16), spatial: spatial})
                 adopt('pixi', sprites.player)
                 adopt('input')
-                body.move_to(expr('@x'), expr('@y'))
+                body.move_to(val('@x'), val('@y'))
                 pixi.color(0x0000FF)
                 jump('move')
                 end()
@@ -643,7 +643,7 @@ function initialize() {
             object('Enemy', ['@x', '@y'], function () {
                 adopt('body', { bounds: new PIXI.Rectangle(0, 0, 24, 24), spatial: spatial})
                 adopt('pixi', sprites.enemy)
-                body.move_to(expr('@x'), expr('@y'))
+                body.move_to(val('@x'), val('@y'))
                 pixi.color(0xFF0000)
                 pixi.alpha(0.5)
                 jump('move')
@@ -658,7 +658,7 @@ function initialize() {
             object('Bullet', ['@x', '@y', '@dir'], function () {
                 adopt('body', { bounds: new PIXI.Rectangle(0, 0, 8, 8), spatial: spatial})
                 adopt('pixi', sprites.bullet)
-                body.move_to(expr('@x'), expr('@y'))
+                body.move_to(val('@x'), val('@y'))
                 _if('@dir === "e"')
                     body.move('/e')
                 _endif()
@@ -684,7 +684,7 @@ function initialize() {
             end()
 
             label('shoot', ['@x', '@y', '@dir'])
-                spawn('Bullet', [expr('@x'), expr('@y'), expr('@dir')])
+                spawn('Bullet', [val('@x'), val('@y'), val('@dir')])
             end()
         });
         board.execute();
