@@ -317,48 +317,21 @@ Parser.prototype.parse = function (entity) {
     this.entity.commands = {};
     this.commands = {};
 
-    var commands = "";
-
-    Util.extend(this.entity.commands, DefaultCommandSet.runCommands.call(null, this.entity));
-    Util.extend(this.commands, DefaultCommandSet.parseCommands.call(null, this, this.entity));
-    commands +=
-        'var val       = this.commands.val;' +
-        'var expr      = this.commands.expr;' +
-        'var label     = this.commands.label;' +
-        'var end       = this.commands.end;' +
-        'var terminate = this.commands.terminate;' +
-        'var _if       = this.commands.if;' +
-        'var _elif     = this.commands.elif;' +
-        'var _else     = this.commands.else;' +
-        'var _endif    = this.commands.endif;' +
-        'var loop      = this.commands.loop;' +
-        'var endloop   = this.commands.endloop;' +
-        'var print     = this.commands.print;' +
-        'var jump      = this.commands.jump;' +
-        'var send      = this.commands.send;' +
-        'var set       = this.commands.set;' +
-        'var wait      = this.commands.wait;' +
-        'var lock      = this.commands.lock;' +
-        'var unlock    = this.commands.unlock;' +
-        'var zap       = this.commands.zap;' +
-        'var restore   = this.commands.restore;' +
-        'var spawn     = this.commands.spawn;' +
-        'var die       = this.commands.die;' +
-        'var become    = this.commands.become;' +
-        'var exec      = this.commands.exec;' +
-        'var adopt     = this.commands.adopt;';
-
-    this.addedModules.forEach(function (name) {
-        var moduleObj = this.modules[name];
+    this.addedModules.forEach(function (moduleName) {
+        var moduleObj = this.modules[moduleName];
         Util.extend(this.entity.commands, moduleObj.runCommands.call(null, this.entity));
         Util.extend(this.commands, moduleObj.parseCommands.call(null, this, this.entity));
-        commands += 'var ' + name + ' = this.commands.' + name + ';';
     }.bind(this));
+
+    var commandStr = "";
+    for (var name in this.commands) {
+        commandStr += 'var ' + name + ' = this.commands.' + name + ';';
+    }
 
     var varParams = '["' + this.entity.initVarParams.join('","') + '"]';
 
     (new Function(
-        commands +
+        commandStr +
         'label("_start", ' + varParams + ');' +
         this.entity.script.toString().replace("function ()", "") + ";" +
         'end();'
@@ -399,7 +372,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         parser.parsePreviousBlock();
     },
 
-    if: function (condition) {
+    _if: function (condition) {
         var condition = typeof condition === 'string' ? new Expression(condition, entity) : condition;
         var block = new IfBlock();
 
@@ -408,19 +381,19 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         parser.currentBlock.addBranch(entity.commands.if.bind(entity, condition));
     },
 
-    elif: function (condition) {
+    _elif: function (condition) {
         var condition = typeof condition === 'string' ? new Expression(condition, entity) : condition;
 
         parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
         parser.currentBlock.addBranch(entity.commands.elif.bind(entity, condition));
     },
 
-    else: function () {
+    _else: function () {
         parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
         parser.currentBlock.addBranch(entity.commands.else.bind(entity));
     },
 
-    endif: function () {
+    _endif: function () {
         parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
         parser.parsePreviousBlock();
     },
@@ -1113,10 +1086,12 @@ Board.prototype.terminate = function () {
 }
 
 var DefaultParser = new Parser();
+DefaultParser.registerModule('default', DefaultCommandSet);
 DefaultParser.registerModule('html', DOMCommandSet);
 DefaultParser.registerModule('pixi', PIXICommandSet);
 DefaultParser.registerModule('body', PhysicsCommandSet);
 DefaultParser.registerModule('input', InputCommandSet);
+DefaultParser.addModule('default');
 DefaultParser.addModule('html');
 DefaultParser.addModule('pixi');
 DefaultParser.addModule('body');
