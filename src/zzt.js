@@ -20,6 +20,25 @@ Util = (function () {
     };
 })();
 
+Function.prototype.fastBind = function (context) {
+    var self = this;
+    var curriedArgs = Array.prototype.slice.call(arguments, 1);
+    if (curriedArgs.length) {
+        return function () {
+            var allArgs = curriedArgs.slice(0);
+            for (var i = 0, n = arguments.length; i < n; ++i) {
+                allArgs.push(arguments[i]);
+            }
+            self.apply(context, allArgs);
+        };
+    }
+    else {
+        return function () {
+            self.apply(context)
+        }
+    }
+}
+
 Evaluable = function () {
 }
 
@@ -307,9 +326,10 @@ Parser.prototype.parsePreviousBlock = function () {
 }
 
 Parser.prototype._defaultParseFunc = function (runCommand) {
+    var self = this;
     return function () {
-        this.currentBlock.add(Function.bind.apply(runCommand, [this.entity].concat(Array.prototype.slice.call(arguments))));
-    }.bind(this);
+        self.currentBlock.add(Function.fastBind.apply(runCommand, [self.entity].concat(Array.prototype.slice.call(arguments))));
+    };
 }
 
 Parser.prototype.parse = function (entity) {
@@ -321,7 +341,7 @@ Parser.prototype.parse = function (entity) {
         var moduleObj = this.modules[moduleName];
         Util.extend(this.entity.commands, moduleObj.runCommands.call(null, this.entity));
         Util.extend(this.commands, moduleObj.parseCommands.call(null, this, this.entity));
-    }.bind(this));
+    }, this);
 
     var commandStr = "";
     for (var name in this.commands) {
@@ -368,7 +388,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         if (!parser.currentBlock)
             return;
 
-        parser.currentBlock.add(entity.commands.end.bind(entity));
+        parser.currentBlock.add(entity.commands.end.fastBind(entity));
         parser.parsePreviousBlock();
     },
 
@@ -376,25 +396,25 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         var condition = typeof condition === 'string' ? new Expression(condition, entity) : condition;
         var block = new IfBlock();
 
-        parser.currentBlock.add(entity.runBlock.bind(entity, block));
+        parser.currentBlock.add(entity.runBlock.fastBind(entity, block));
         parser.parseNewBlock(block);
-        parser.currentBlock.addBranch(entity.commands.if.bind(entity, condition));
+        parser.currentBlock.addBranch(entity.commands.if.fastBind(entity, condition));
     },
 
     _elif: function (condition) {
         var condition = typeof condition === 'string' ? new Expression(condition, entity) : condition;
 
-        parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
-        parser.currentBlock.addBranch(entity.commands.elif.bind(entity, condition));
+        parser.currentBlock.add(entity.runPreviousBlock.fastBind(entity));
+        parser.currentBlock.addBranch(entity.commands.elif.fastBind(entity, condition));
     },
 
     _else: function () {
-        parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
-        parser.currentBlock.addBranch(entity.commands.else.bind(entity));
+        parser.currentBlock.add(entity.runPreviousBlock.fastBind(entity));
+        parser.currentBlock.addBranch(entity.commands.else.fastBind(entity));
     },
 
     _endif: function () {
-        parser.currentBlock.add(entity.runPreviousBlock.bind(entity));
+        parser.currentBlock.add(entity.runPreviousBlock.fastBind(entity));
         parser.parsePreviousBlock();
     },
 
@@ -402,32 +422,32 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         count = typeof count === 'string' ? new Expression(count, entity) : count;
         var block = new LoopBlock(count);
 
-        parser.currentBlock.add(entity.runBlock.bind(entity, block));
+        parser.currentBlock.add(entity.runBlock.fastBind(entity, block));
         parser.parseNewBlock(block);
-        parser.currentBlock.add(entity.commands.loop.bind(entity));
+        parser.currentBlock.add(entity.commands.loop.fastBind(entity));
     },
 
     endloop: function () {
-        parser.currentBlock.add(entity.commands.endloop.bind(entity));
+        parser.currentBlock.add(entity.commands.endloop.fastBind(entity));
         parser.parsePreviousBlock();
     },
 
     wait: function (count) {
         parser.commands.loop(count);
-        parser.currentBlock.add(entity.commands.wait.bind(entity));
+        parser.currentBlock.add(entity.commands.wait.fastBind(entity));
         parser.commands.endloop();
     },
 
     send: function (scopeStr, label, varArgs) {
-        parser.currentBlock.add(entity.commands.send.bind(entity, new Scope(scopeStr), label, varArgs));
+        parser.currentBlock.add(entity.commands.send.fastBind(entity, new Scope(scopeStr), label, varArgs));
     },
 
     adopt: function (moduleName, initParams) {
-        parser.currentBlock.add(entity.commands[moduleName].__init__.bind(entity, initParams));
+        parser.currentBlock.add(entity.commands[moduleName].__init__.fastBind(entity, initParams));
     },
 
     set: function (varName, value) {
-        parser.currentBlock.add(entity.commands.set.bind(entity, varName, value));
+        parser.currentBlock.add(entity.commands.set.fastBind(entity, varName, value));
     },
 
     terminate: parser._defaultParseFunc(entity.commands.terminate),
@@ -578,7 +598,7 @@ DOMCommandSet.runCommands = function (entity) {
         __init__: function (params) {
             entity.element = document.getElementById(params.id) || null;
             if (entity.element) {
-                entity.element.onclick = function () { entity.gotoLabel('@click') }.bind(entity);
+                entity.element.onclick = function () { entity.gotoLabel('@click') }.fastBind(entity);
             }
         },
 
@@ -692,7 +712,7 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
                 if (dirs[i].length === 0)
                     continue;
 
-                parser.currentBlock.add(entity.commands.body.move.bind(entity, dirs[i]));
+                parser.currentBlock.add(entity.commands.body.move.fastBind(entity, dirs[i]));
                 parser.commands.wait(5);
             }
         }
