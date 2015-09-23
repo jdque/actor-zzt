@@ -298,21 +298,20 @@ Parser = function (entity) {
     this.currentBlock = null;
     this.blockStack = [];
 
-    this.modules = {};
-    this.addedModules = [];
+    this.modules = [];
 }
 
-Parser.prototype.registerModule = function (name, moduleObj) {
-    this.modules[name] = moduleObj;
-}
-
-Parser.prototype.addModule = function (name) {
-    var moduleObj = this.modules[name];
-    if (!moduleObj) {
-        return;
+Parser.prototype.registerModule = function (name, commandSet) {
+    for (var i = 0; i < this.modules.length; i++) {
+        if (this.modules[i].name === name) {
+            return;
+        }
     }
 
-    this.addedModules.push(name);
+    this.modules.push({
+        name: name,
+        commandSet: commandSet
+    });
 }
 
 Parser.prototype.parseNewBlock = function (block) {
@@ -337,10 +336,10 @@ Parser.prototype.parse = function (entity) {
     this.entity.commands = {};
     this.commands = {};
 
-    this.addedModules.forEach(function (moduleName) {
-        var moduleObj = this.modules[moduleName];
-        Util.extend(this.entity.commands, moduleObj.runCommands.call(null, this.entity));
-        Util.extend(this.commands, moduleObj.parseCommands.call(null, this, this.entity));
+    this.modules.forEach(function (module) {
+        var commandSet = module.commandSet;
+        Util.extend(this.entity.commands, commandSet.runCommands.call(null, this.entity));
+        Util.extend(this.commands, commandSet.parseCommands.call(null, this, this.entity));
     }, this);
 
     var commandStr = "";
@@ -932,6 +931,7 @@ Board = function () {
     this.runScript = function () {};
     this.objects = {};
     this.autoStep = false;
+    this.parser = null;
 
     //Execution
     this.boardEntity = null;
@@ -957,8 +957,9 @@ Board.prototype.finish = function (func) {
     return this;
 }
 
-Board.prototype.setAutoStep = function (autoStep) {
-    this.autoStep = autoStep;
+Board.prototype.configure = function (config) {
+    this.autoStep = config.autoStep || false;
+    this.parser = config.parser || new Parser();
     return this;
 }
 
@@ -973,7 +974,7 @@ Board.prototype.execute = function () {
     this.boardEntity = new Entity(this, "_board", this.runScript, []);
     this.boardEntity.depth = 0;
     this.boardEntity.parent = this.boardEntity;
-    DefaultParser.parse(this.boardEntity);
+    this.parser.parse(this.boardEntity);
     this.boardEntity.begin();
     this.instances[0]["_board"] = [];
     this.instances[0]["_board"].push(this.boardEntity);
@@ -1057,7 +1058,7 @@ Board.prototype.spawnObject = function (name, parent, initVarArgs) {
     var obj = Entity.clone(this.objects[name]);
     obj.depth = parent ? parent.depth + 1 : 0;
     obj.parent = parent || obj;
-    DefaultParser.parse(obj);
+    this.parser.parse(obj);
     obj.begin(initVarArgs);
 
     this.spawnedObjs.push(obj);
@@ -1105,20 +1106,10 @@ Board.prototype.terminate = function () {
     this.terminated = true;
 }
 
-var DefaultParser = new Parser();
-DefaultParser.registerModule('default', DefaultCommandSet);
-DefaultParser.registerModule('html', DOMCommandSet);
-DefaultParser.registerModule('pixi', PIXICommandSet);
-DefaultParser.registerModule('body', PhysicsCommandSet);
-DefaultParser.registerModule('input', InputCommandSet);
-DefaultParser.addModule('default');
-DefaultParser.addModule('html');
-DefaultParser.addModule('pixi');
-DefaultParser.addModule('body');
-DefaultParser.addModule('input');
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = {
-        Board: Board
+        Board: Board,
+        Parser: Parser
     };
 }

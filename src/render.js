@@ -586,7 +586,18 @@ function initialize() {
             }
         }
 
+        RenderParser = new Parser();
+        RenderParser.registerModule('default', DefaultCommandSet);
+        RenderParser.registerModule('html', DOMCommandSet);
+        RenderParser.registerModule('pixi', PIXICommandSet);
+        RenderParser.registerModule('body', PhysicsCommandSet);
+        RenderParser.registerModule('input', InputCommandSet);
+
         window.board = new Board();
+        board.configure({
+            autoStep: false,
+            parser: RenderParser
+        });
         board.setup(function () {
             object('Player', ['@x', '@y'], function () {
                 adopt('body', { bounds: new PIXI.Rectangle(0, 0, 16, 16), spatial: spatial})
