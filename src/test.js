@@ -132,6 +132,15 @@ board.run(function (spawn) {
     spawn('player')
 });*/
 
+var HTMLParser = new Parser();
+HTMLParser.registerModule('default', DefaultCommandSet);
+HTMLParser.registerModule('html', DOMCommandSet);
+
+board.configure({
+    autoStep: false,
+    parser: HTMLParser
+});
+
 board.setup(function () {
     object('about', function () {
         adopt('html', {id: 'dom_about'})
