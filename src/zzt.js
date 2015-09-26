@@ -438,7 +438,8 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     },
 
     send: function (scopeStr, label, varArgs) {
-        parser.currentBlock.add(entity.commands.send.fastBind(entity, new Scope(scopeStr), label, varArgs));
+        var scope = typeof scopeStr === 'string' ? new Scope(scopeStr) : scopeStr;
+        parser.currentBlock.add(entity.commands.send.fastBind(entity, scope, label, varArgs));
     },
 
     adopt: function (moduleName, initParams) {
@@ -700,6 +701,19 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
                 var objs = entity.body.spatial.getIntersect(entity.body.bounds, delta.dx, delta.dy);
                 return objs.length > 1;
             }, entity);
+        },
+
+        dir: function (dir) {
+            return {
+                execute: function (entity) {
+                    var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
+                    var objs = entity.body.spatial.query()
+                        .distance(entity.body.bounds, 1)
+                        .direction(entity.body.bounds, delta.dx / 8, delta.dy / 8)
+                        .get();
+                    return objs;
+                }
+            };
         },
 
         move_to: parser._defaultParseFunc(entity.commands.body.move_to),

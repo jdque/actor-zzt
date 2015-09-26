@@ -288,11 +288,31 @@ Spatial.prototype.isInside = function (testRect, inRect) {
     return false;
 }
 
-Spatial.prototype.isWithin = function (rect, fromX, fromY, distance) {
-    //TODO Calculate based on closet point on object boundary instead of center
-    var centerX = rect.x + rect.width / 2;
-    var centerY = rect.y + rect.height / 2;
-    if (Math.sqrt(Math.pow(centerX - fromX, 2) + Math.pow(centerY - fromY, 2)) <= distance) {
+Spatial.prototype.isWithin = function (testRect, fromRect, distance) {
+    if (this.isIntersect(testRect, fromRect)) {
+        return true;
+    }
+
+    var fromX = 0;
+    var fromY = 0;
+    var testX = 0;
+    var testY = 0;
+
+    if (fromRect.x + fromRect.width < testRect.x) {
+        fromX = fromRect.x + fromRect.width;
+    }
+    else if (testRect.x + testRect.width < fromRect.x) {
+        testX = testRect.x + testRect.width
+    }
+
+    if (fromRect.y + fromRect.height < testRect.y) {
+        fromY = fromRect.y + fromRect.height;
+    }
+    else if (testRect.y + testRect.height < fromRect.y) {
+        testY = testRect.y + testRect.height;
+    }
+
+    if (Math.sqrt(Math.pow(fromX - testX, 2) + Math.pow(fromY - testY, 2)) <= distance) {
         return true;
     }
 
@@ -348,10 +368,10 @@ Spatial.prototype.getInside = function (rect, offsetX, offsetY) {
     return objs;
 }
 
-Spatial.prototype.getWithin = function (x, y, distance) {
-    var objs = this.finder.getNearbyObjects(x - distance, y - distance, distance * 2, distance * 2);
+Spatial.prototype.getWithin = function (rect, distance) {
+    var objs = this.finder.getNearbyObjects(rect.x - distance, rect.y - distance, rect.width + distance * 2, rect.height + distance * 2);
     for (var i = objs.length - 1; i >= 0; i--) {
-        if (!this.isWithin(objs[i].body.bounds, x, y, distance)) {
+        if (!this.isWithin(objs[i].body.bounds, rect, distance)) {
             objs[i] = objs[objs.length - 1];
             objs.pop();
         }
@@ -460,18 +480,18 @@ Spatial.prototype.query = function () {
             return closure;
         }
 
-        function distance(distance, fromX, fromY) {
+        function distance(fromRect, distance) {
             if (!resultSet) {
                 if (notIsActive) {
-                    resultSet = listDiff(spatial.getAll(), spatial.getWithin(fromX, fromY, distance));
+                    resultSet = listDiff(spatial.getAll(), spatial.getWithin(fromRect, distance));
                 }
                 else {
-                    resultSet = spatial.getWithin(fromX, fromY, distance);
+                    resultSet = spatial.getWithin(fromRect, distance);
                 }
             }
             else {
                 resultSet = resultSet.filter(function (obj) {
-                    return spatial.isWithin(obj.body.bounds, fromX, fromY, distance) !== notIsActive;
+                    return spatial.isWithin(obj.body.bounds, fromRect, distance) !== notIsActive;
                 });
             }
 
@@ -630,22 +650,6 @@ function initialize() {
                         body.move('/i')
                     _endif()
 
-                    exec(function (entity) {
-                        var all = entity.body.spatial.query().all().get();
-                        all.forEach(function (obj) {
-                            obj.pixiObject.tint = 0xFF0000;
-                        });
-
-                        var boundary = entity.body.spatial.query()
-                            //.intersect(new PIXI.Rectangle(128, 128, 640 - 256, 480 - 256))
-                            //.not().intersect(new PIXI.Rectangle(128, 128, 128, 128))
-                            .distance(128, entity.body.bounds.x + entity.body.bounds.width / 2, entity.body.bounds.y + entity.body.bounds.height / 2)
-                            .direction(entity.body.bounds, 0, -1)
-                            .get();
-                        boundary.forEach(function (obj) {
-                            obj.pixiObject.tint = 0xFFFFFF;
-                        });
-                    })
                     wait(1)
                     jump('move')
                 end()
@@ -664,6 +668,10 @@ function initialize() {
                     body.move('/rnd')
                     jump('move')
                 end()
+
+                label('enemy_stop')
+                    print("OUCH")
+                end()
             });
 
             object('Bullet', ['@x', '@y', '@dir'], function () {
@@ -677,6 +685,7 @@ function initialize() {
 
                 label('loop')
                     _if(body.blocked('flow'))
+                        send(body.dir('flow'), 'enemy_stop')
                         jump('stop')
                     _endif()
                     body.move('/flow')
