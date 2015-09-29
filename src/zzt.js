@@ -443,7 +443,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     },
 
     adopt: function (moduleName, initParams) {
-        parser.currentBlock.add(entity.commands[moduleName].__init__.fastBind(entity, initParams));
+        parser.currentBlock.add(entity.commands.adopt.fastBind(entity, entity.commands[moduleName], initParams));
     },
 
     set: function (varName, value) {
@@ -526,6 +526,11 @@ DefaultCommandSet.runCommands = function (entity) { return {
         }
     },
 
+    adopt: function (commandSet, initParams) {
+        entity.adoptions.push(commandSet);
+        commandSet.__init__(initParams);
+    },
+
     set: function (varName, value) {
         var resolvedName = varName.replace('@', '').replace('$', '');
         var resolvedValue = (value instanceof Evaluable) ? value.evaluate() : value;
@@ -569,6 +574,12 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.locked = true;
         entity.ended = true;
         entity.cycleEnded = true;
+
+        entity.adoptions.forEach(function (commandSet) {
+           commandSet.__destroy__();
+        });
+        entity.adoptions = [];
+
         entity.board.removeObject(entity);
     },
 
@@ -600,6 +611,11 @@ DOMCommandSet.runCommands = function (entity) {
             if (entity.element) {
                 entity.element.onclick = function () { entity.gotoLabel('@click') }.fastBind(entity);
             }
+        },
+
+        __destroy__: function () {
+            entity.element.onclick = null;
+            entity.element = null;
         },
 
         exec: function (func) {
@@ -636,6 +652,11 @@ PIXICommandSet.runCommands = function (entity) {
             window.stage.addChild(obj);
 
             entity.pixiObject = obj;
+        },
+
+        __destroy__: function () {
+            window.stage.removeChild(entity.pixiObject);
+            entity.pixiObject = null;
         },
 
         color: function (color) {
@@ -748,6 +769,11 @@ PhysicsCommandSet.runCommands = function (entity) {
             entity.body.spatial.register(entity);
         },
 
+        __destroy__: function () {
+            entity.body.spatial.unregister(entity);
+            entity.body = null;
+        },
+
         move_to: function (x, y) {
             if (!entity.body)
                 return;
@@ -819,25 +845,35 @@ InputCommandSet.runCommands = function (entity) {
     var input = {
         __init__: function (params) {
             entity.input = {
-                downKeys: []
+                downKeys: [],
+                handlers: {}
             };
 
-            document.addEventListener('keydown', function (e) {
+            entity.input.handlers.keyDown = function (e) {
                 if (entity.input.downKeys.indexOf(e.keyCode) === -1) {
                     entity.input.downKeys.push(e.keyCode);
                 }
                 entity.gotoLabel('@input.key_down');
-            });
+            };
 
-            document.addEventListener('keyup', function (e) {
+            entity.input.handlers.keyUp = function (e) {
                 var keyIdx = entity.input.downKeys.indexOf(e.keyCode);
                 if (keyIdx !== -1) {
                     entity.input.downKeys[keyIdx] = entity.input.downKeys[entity.input.downKeys.length - 1];
                     entity.input.downKeys.pop();
                 }
                 entity.gotoLabel('@input.key_up');
-            });
-        }
+            };
+
+            document.addEventListener('keydown', entity.input.handlers.keyDown);
+            document.addEventListener('keyup', entity.input.handlers.keyUp);
+        },
+
+        __destroy__: function () {
+            document.removeEventListener('keydown', entity.input.handlers.keyDown);
+            document.removeEventListener('keyup', entity.input.handlers.keyUp);
+            entity.input = null;
+        },
     };
 
     return {
@@ -857,6 +893,7 @@ Entity = function (board, name, script, initVarParams) {
 
     //State
     this.variables = {};
+    this.adoptions = [];
     this.ended = false;
     this.cycleEnded = false;
     this.locked = false;
@@ -1017,7 +1054,8 @@ Board.prototype.step = function () {
 
     //Purge dead objects
     for (var i = 0; i < this.deletedObjs.length; i++) {
-        this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].splice(this.deletedObjs[i], 1);
+        this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].splice(
+            this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].indexOf(this.deletedObjs[i]), 1);
     }
     this.deletedObjs = [];
 

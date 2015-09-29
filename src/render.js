@@ -671,7 +671,7 @@ function initialize() {
 
                 label('enemy_stop')
                     print("OUCH")
-                end()
+                die()
             });
 
             object('Bullet', ['@x', '@y', '@dir'], function () {
@@ -693,7 +693,7 @@ function initialize() {
                 end()
 
                 label('stop')
-                end()
+                die()
             })
         });
         board.run(function () {
