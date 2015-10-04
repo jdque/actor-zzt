@@ -14,18 +14,47 @@ TileSprite.prototype.draw = function () {
     //this.setTiles(this.tiles, this.tileWidth, this.tileHeight);
 }
 
+function Tile(attrs) {
+    this.fg = attrs.fg || 0x000000;
+    this.bg = attrs.bg || 0x000000;
+    this.char = attrs.char || 0;
+}
+
+function TilePalette() {
+    this.palette = {};
+}
+
+TilePalette.prototype.setEntry = function (id, tile) {
+    this.palette[id] = tile;
+}
+
+TilePalette.prototype.convertToTiles = function (entries) {
+    var mapTiles = [];
+    for (var i = 0; i < entries.length; i++) {
+        mapTiles.push(this.palette[entries[i]]);
+    }
+
+    return mapTiles;
+}
+
 function TileMap(canvas, tiles, width, height) {
     this.baseTexture = PIXI.Texture.fromCanvas(canvas);
     this.canvas = canvas;
 
     PIXI.Sprite.apply(this, [this.baseTexture]);
 
+    this.tiles = [];
+    this.tileWidth = 0;
+    this.tileHeight = 0;
+}
+
+TileMap.prototype = Object.create(PIXI.Sprite.prototype);
+
+TileMap.prototype.setTiles = function (tiles, width, height) {
     this.tiles = tiles;
     this.tileWidth = width;
     this.tileHeight = height;
 }
-
-TileMap.prototype = Object.create(PIXI.Sprite.prototype);
 
 TileMap.prototype.getTile = function (tileX, tileY) {
     if (tileX > this.tileWidth - 1 || tileY > this.tileHeight - 1) {
@@ -35,16 +64,36 @@ TileMap.prototype.getTile = function (tileX, tileY) {
 }
 
 TileMap.prototype.draw = function () {
-    var context = this.canvas.getContext('2d');
-    for (var i = 0; i < this.tileHeight; i++) {
-        for (var j = 0; j < this.tileWidth; j++) {
-            var tileId = this.tiles[(i * this.tileWidth) + j];
-            context.drawImage(
+    var ctx = this.canvas.getContext('2d');
+    for (var y = 0; y < this.tileHeight; y++) {
+        for (var x = 0; x < this.tileWidth; x++) {
+            var tile = this.tiles[(x * this.tileWidth) + y];
+
+            ctx.drawImage(
                 TILESET,
-                (tileId % 16) * 8, Math.floor(tileId / 16) * 8,
+                (tile.char % 16) * 8, Math.floor(tile.char / 16) * 8,
                 8, 8,
-                j * 8, i * 8,
+                x * 8, y * 8,
                 8, 8);
+
+            //Tint white and black pixels with tile's foreground and background color, respectively
+            var fgRgb = {r: (tile.fg >> 16) & 0xFF, g: (tile.fg >> 8) & 0xFF, b: tile.fg & 0xFF};
+            var bgRgb = {r: (tile.bg >> 16) & 0xFF, g: (tile.bg >> 8) & 0xFF, b: tile.bg & 0xFF};
+            var imageData = ctx.getImageData(x * 8, y * 8, 8, 8);
+            var pixels = imageData.data;
+            for (var i = 0; i < pixels.length; i += 4) {
+                if (pixels[i] > 0 && pixels[i+1] > 0 && pixels[i+2] > 0) {
+                    pixels[i] = fgRgb.r;
+                    pixels[i+1] = fgRgb.g;
+                    pixels[i+2] = fgRgb.b;
+                }
+                else {
+                    pixels[i] = bgRgb.r;
+                    pixels[i+1] = bgRgb.g;
+                    pixels[i+2] = bgRgb.b;
+                }
+            }
+            ctx.putImageData(imageData, x * 8, y * 8);
         }
     }
 }
@@ -63,7 +112,8 @@ TileMap.prototype.getTilesInRect = function (rect) {
 TileMap.prototype.anyTileInRect = function (rect) {
     for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
         for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
-            if (this.getTile(x / 8, y / 8) > 0) {
+            var tile = this.getTile(x / 8, y / 8);
+            if (tile && tile.char !== 0) {
                 return true;
             }
         }
@@ -607,6 +657,7 @@ var TILESET = null;
 var cacheCanvas = null;
 var textureCache = null;
 
+var tilePalette = null;
 var tileMap = null;
 var tileMapCanvas = null;
 
@@ -644,19 +695,26 @@ function initialize() {
 
         textureCache = new TextureCache(cacheCanvas);
 
+        tilePalette = new TilePalette();
+        tilePalette.setEntry(0, new Tile({fg: 0x000000, bg: 0x000000, char: 0}));
+        tilePalette.setEntry(219, new Tile({fg: 0xFF0000, bg: 0x00FF00, char: 100}));
+
         tileMapCanvas = document.createElement('canvas');
         tileMapCanvas.width = 640;
         tileMapCanvas.height = 480;
         tileMapCanvas.style.backgroundColor = 0x000000;
         document.body.appendChild(tileMapCanvas);
-        tileMap = new TileMap(tileMapCanvas,
-                  [219, 219, 219, 219, 219,
-                   219, 0  , 0  , 0  , 219,
-                   219, 0  , 0  , 0  , 219,
-                   219, 0  , 0  , 0  , 219,
-                   219, 219, 219, 219, 219],
-                   5, 5);
+
+        tileMap = new TileMap(tileMapCanvas);
         window.stage.addChild(tileMap);
+
+        var tiles = tilePalette.convertToTiles(
+          [219, 219, 219, 219, 219,
+           219, 0  , 0  , 0  , 219,
+           219, 0  , 0  , 0  , 219,
+           219, 0  , 0  , 0  , 219,
+           219, 219, 219, 219, 219]);
+        tileMap.setTiles(tiles, 5, 5);
         tileMap.draw();
 
         window.spatial = new Spatial(new GridHash(32));
