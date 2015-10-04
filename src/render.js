@@ -14,6 +14,64 @@ TileSprite.prototype.draw = function () {
     //this.setTiles(this.tiles, this.tileWidth, this.tileHeight);
 }
 
+function TileMap(canvas, tiles, width, height) {
+    this.baseTexture = PIXI.Texture.fromCanvas(canvas);
+    this.canvas = canvas;
+
+    PIXI.Sprite.apply(this, [this.baseTexture]);
+
+    this.tiles = tiles;
+    this.tileWidth = width;
+    this.tileHeight = height;
+}
+
+TileMap.prototype = Object.create(PIXI.Sprite.prototype);
+
+TileMap.prototype.getTile = function (tileX, tileY) {
+    if (tileX > this.tileWidth - 1 || tileY > this.tileHeight - 1) {
+        return null;
+    }
+    return this.tiles[this.tileWidth * tileY + tileX];
+}
+
+TileMap.prototype.draw = function () {
+    var context = this.canvas.getContext('2d');
+    for (var i = 0; i < this.tileHeight; i++) {
+        for (var j = 0; j < this.tileWidth; j++) {
+            var tileId = this.tiles[(i * this.tileWidth) + j];
+            context.drawImage(
+                TILESET,
+                (tileId % 16) * 8, Math.floor(tileId / 16) * 8,
+                8, 8,
+                j * 8, i * 8,
+                8, 8);
+        }
+    }
+}
+
+TileMap.prototype.getTilesInRect = function (rect) {
+    var tiles = [];
+    for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
+        for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
+            tiles.push(this.getTile(x / 8, y / 8));
+        }
+    }
+
+    return tiles;
+}
+
+TileMap.prototype.anyTileInRect = function (rect) {
+    for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
+        for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
+            if (this.getTile(x / 8, y / 8) > 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 function TextureCache(canvas) {
     this.baseTexture = PIXI.Texture.fromCanvas(canvas);
     this.canvas = canvas;
@@ -549,6 +607,9 @@ var TILESET = null;
 var cacheCanvas = null;
 var textureCache = null;
 
+var tileMap = null;
+var tileMapCanvas = null;
+
 function update() {
     window.board.step();
 
@@ -582,6 +643,21 @@ function initialize() {
         cacheCanvas.height = 960;
 
         textureCache = new TextureCache(cacheCanvas);
+
+        tileMapCanvas = document.createElement('canvas');
+        tileMapCanvas.width = 640;
+        tileMapCanvas.height = 480;
+        tileMapCanvas.style.backgroundColor = 0x000000;
+        document.body.appendChild(tileMapCanvas);
+        tileMap = new TileMap(tileMapCanvas,
+                  [219, 219, 219, 219, 219,
+                   219, 0  , 0  , 0  , 219,
+                   219, 0  , 0  , 0  , 219,
+                   219, 0  , 0  , 0  , 219,
+                   219, 219, 219, 219, 219],
+                   5, 5);
+        window.stage.addChild(tileMap);
+        tileMap.draw();
 
         window.spatial = new Spatial(new GridHash(32));
 

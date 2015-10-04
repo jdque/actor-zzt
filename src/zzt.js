@@ -718,9 +718,26 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
     var body = {
         blocked: function (dir) {
             return new DeferredFunction(function () {
+                var blocked = false;
                 var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
-                var objs = entity.body.spatial.getIntersect(entity.body.bounds, delta.dx, delta.dy);
-                return objs.length > 1;
+
+                entity.body.bounds.x += delta.dx;
+                entity.body.bounds.y += delta.dy;
+
+                var objs = entity.body.spatial.getIntersect(entity.body.bounds);
+                if (objs.length > 1) {
+                    blocked = true;
+                }
+
+                var tileMapCollide = window.tileMap.anyTileInRect(entity.body.bounds);
+                if (tileMapCollide) {
+                    blocked = true;
+                }
+
+                entity.body.bounds.x -= delta.dx;
+                entity.body.bounds.y -= delta.dy;
+
+                return blocked;
             }, entity);
         },
 
@@ -798,10 +815,18 @@ PhysicsCommandSet.runCommands = function (entity) {
             var dx = dx instanceof Evaluable ? dx.evaluate() : dx;
             var dy = dy instanceof Evaluable ? dy.evaluate() : dy;
 
-            var objs = entity.body.spatial.getIntersect(entity.body.bounds, dx, dy);
-            if (objs.length <= 1) {
-                entity.body.bounds.x += dx;
-                entity.body.bounds.y += dy;
+            entity.body.bounds.x += dx;
+            entity.body.bounds.y += dy;
+
+            var objs = entity.body.spatial.getIntersect(entity.body.bounds);
+            if (objs.length > 1) {
+                entity.body.bounds.x -= dx;
+                entity.body.bounds.y -= dy;
+            }
+
+            if (window.tileMap.anyTileInRect(entity.body.bounds)) {
+                entity.body.bounds.x -= dx;
+                entity.body.bounds.y -= dy;
             }
 
             entity.body.spatial.update(entity);
