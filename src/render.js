@@ -685,166 +685,166 @@ function testTexturePacking() {
 
 function initialize() {
     TILESET = document.createElement('img');
+    TILESET.onload = run;
     TILESET.src = 'assets/tileset.bmp';
-    TILESET.onload = function () {
-        document.body.appendChild(renderer.view);
+}
 
-        cacheCanvas = document.createElement('canvas');
-        cacheCanvas.width = 640;
-        cacheCanvas.height = 960;
+function run() {
+    document.body.appendChild(renderer.view);
 
-        textureCache = new TextureCache(cacheCanvas);
+    cacheCanvas = document.createElement('canvas');
+    cacheCanvas.width = 640;
+    cacheCanvas.height = 960;
 
-        tilePalette = new TilePalette();
-        tilePalette.setEntry(0, new Tile({fg: 0x000000, bg: 0x000000, char: 0}));
-        tilePalette.setEntry(219, new Tile({fg: 0xFF0000, bg: 0x00FF00, char: 100}));
+    textureCache = new TextureCache(cacheCanvas);
 
-        tileMapCanvas = document.createElement('canvas');
-        tileMapCanvas.width = 640;
-        tileMapCanvas.height = 480;
-        tileMapCanvas.style.backgroundColor = 0x000000;
-        document.body.appendChild(tileMapCanvas);
+    tilePalette = new TilePalette();
+    tilePalette.setEntry(0, new Tile({fg: 0x000000, bg: 0x000000, char: 0}));
+    tilePalette.setEntry(219, new Tile({fg: 0xFF0000, bg: 0x00FF00, char: 100}));
 
-        tileMap = new TileMap(tileMapCanvas);
-        window.stage.addChild(tileMap);
+    tileMapCanvas = document.createElement('canvas');
+    tileMapCanvas.width = 640;
+    tileMapCanvas.height = 480;
 
-        var tiles = tilePalette.convertToTiles(
-          [219, 219, 219, 219, 219,
-           219, 0  , 0  , 0  , 219,
-           219, 0  , 0  , 0  , 219,
-           219, 0  , 0  , 0  , 219,
-           219, 219, 219, 219, 219]);
-        tileMap.setTiles(tiles, 5, 5);
-        tileMap.draw();
+    tileMap = new TileMap(tileMapCanvas);
+    window.stage.addChild(tileMap);
 
-        window.spatial = new Spatial(new GridHash(32));
+    var tiles = tilePalette.convertToTiles(
+      [219, 219, 219, 219, 219,
+       219, 0  , 0  , 0  , 219,
+       219, 0  , 0  , 0  , 219,
+       219, 0  , 0  , 0  , 219,
+       219, 219, 219, 219, 219]);
+    tileMap.setTiles(tiles, 5, 5);
+    tileMap.draw();
 
-        window.sprites = {
-            player: {
-                tiles: [219, 219,
-                        219, 219],
-                width: 2, height: 2,
-                x: 320, y: 240
-            },
-            enemy: {
-                tiles: [219, 219, 219,
-                        219, 219, 219,
-                        219, 219, 219],
-                width: 3, height: 3,
-                x: 0, y: 0
-            },
-            bullet: {
-                tiles: [7],
-                width: 1, height: 1,
-                x: 0, y: 0
-            }
+    window.spatial = new Spatial(new GridHash(32));
+
+    window.sprites = {
+        player: {
+            tiles: [219, 219,
+                    219, 219],
+            width: 2, height: 2,
+            x: 320, y: 240
+        },
+        enemy: {
+            tiles: [219, 219, 219,
+                    219, 219, 219,
+                    219, 219, 219],
+            width: 3, height: 3,
+            x: 0, y: 0
+        },
+        bullet: {
+            tiles: [7],
+            width: 1, height: 1,
+            x: 0, y: 0
         }
+    }
 
-        RenderParser = new Parser();
-        RenderParser.registerModule('default', DefaultCommandSet);
-        RenderParser.registerModule('html', DOMCommandSet);
-        RenderParser.registerModule('pixi', PIXICommandSet);
-        RenderParser.registerModule('body', PhysicsCommandSet);
-        RenderParser.registerModule('input', InputCommandSet);
+    RenderParser = new Parser();
+    RenderParser.registerModule('default', DefaultCommandSet);
+    RenderParser.registerModule('html', DOMCommandSet);
+    RenderParser.registerModule('pixi', PIXICommandSet);
+    RenderParser.registerModule('body', PhysicsCommandSet);
+    RenderParser.registerModule('input', InputCommandSet);
 
-        window.board = new Board();
-        board.configure({
-            autoStep: false,
-            parser: RenderParser
-        });
-        board.setup(function () {
-            object('Player', ['@x', '@y'], function () {
-                adopt('body', { bounds: new PIXI.Rectangle(0, 0, 16, 16), spatial: spatial})
-                adopt('pixi', sprites.player)
-                adopt('input')
-                body.move_to(val('@x'), val('@y'))
-                pixi.color(0x0000FF)
-                jump('move')
-                end()
+    window.board = new Board();
+    board.configure({
+        autoStep: false,
+        parser: RenderParser
+    });
+    board.setup(function () {
+        object('Player', ['@x', '@y'], function () {
+            adopt('body', { bounds: new PIXI.Rectangle(0, 0, 16, 16), spatial: spatial})
+            adopt('pixi', sprites.player)
+            adopt('input')
+            body.move_to(val('@x'), val('@y'))
+            pixi.color(0x0000FF)
+            jump('move')
+            end()
 
-                label('move')
-                    _if(input.key_down(38))
-                        body.move('/n')
-                    _elif(input.key_down(40))
-                        body.move('/s')
-                    _endif()
+            label('move')
+                _if(input.key_down(38))
+                    body.move('/n')
+                _elif(input.key_down(40))
+                    body.move('/s')
+                _endif()
 
-                    _if(input.key_down(37))
-                        body.move('/w')
-                    _elif(input.key_down(39))
-                        body.move('/e')
-                    _endif()
-
-                    _if(input.key_down(32))
-                        send('[parent]', 'shoot', [expr('this.body.bounds.x + this.body.bounds.width'), expr('this.body.bounds.y'), "e"])
-                        wait(5)
-                    _endif()
-
-                    _if(body.blocked('flow'))
-                        body.move('/i')
-                    _endif()
-
-                    wait(1)
-                    jump('move')
-                end()
-            });
-
-            object('Enemy', ['@x', '@y'], function () {
-                adopt('body', { bounds: new PIXI.Rectangle(0, 0, 24, 24), spatial: spatial})
-                adopt('pixi', sprites.enemy)
-                body.move_to(val('@x'), val('@y'))
-                pixi.color(0xFF0000)
-                pixi.alpha(0.5)
-                jump('move')
-                end()
-
-                label('move')
-                    body.move('/rnd')
-                    jump('move')
-                end()
-
-                label('enemy_stop')
-                    print("OUCH")
-                die()
-            });
-
-            object('Bullet', ['@x', '@y', '@dir'], function () {
-                adopt('body', { bounds: new PIXI.Rectangle(0, 0, 8, 8), spatial: spatial})
-                adopt('pixi', sprites.bullet)
-                body.move_to(val('@x'), val('@y'))
-                _if('@dir === "e"')
+                _if(input.key_down(37))
+                    body.move('/w')
+                _elif(input.key_down(39))
                     body.move('/e')
                 _endif()
+
+                _if(input.key_down(32))
+                    send('[parent]', 'shoot', [expr('this.body.bounds.x + this.body.bounds.width'), expr('this.body.bounds.y'), "e"])
+                    wait(5)
+                _endif()
+
+                _if(body.blocked('flow'))
+                    body.move('/i')
+                _endif()
+
+                wait(1)
+                jump('move')
+            end()
+        });
+
+        object('Enemy', ['@x', '@y'], function () {
+            adopt('body', { bounds: new PIXI.Rectangle(0, 0, 24, 24), spatial: spatial})
+            adopt('pixi', sprites.enemy)
+            body.move_to(val('@x'), val('@y'))
+            pixi.color(0xFF0000)
+            pixi.alpha(0.5)
+            jump('move')
+            end()
+
+            label('move')
+                body.move('/rnd')
+                jump('move')
+            end()
+
+            label('enemy_stop')
+                print("OUCH")
+            die()
+        });
+
+        object('Bullet', ['@x', '@y', '@dir'], function () {
+            adopt('body', { bounds: new PIXI.Rectangle(0, 0, 8, 8), spatial: spatial})
+            adopt('pixi', sprites.bullet)
+            body.move_to(val('@x'), val('@y'))
+            _if('@dir === "e"')
+                body.move('/e')
+            _endif()
+            jump('loop')
+
+            label('loop')
+                _if(body.blocked('flow'))
+                    send(body.dir('flow'), 'enemy_stop')
+                    jump('stop')
+                _endif()
+                body.move('/flow')
                 jump('loop')
-
-                label('loop')
-                    _if(body.blocked('flow'))
-                        send(body.dir('flow'), 'enemy_stop')
-                        jump('stop')
-                    _endif()
-                    body.move('/flow')
-                    jump('loop')
-                end()
-
-                label('stop')
-                die()
-            })
-        });
-        board.run(function () {
-            loop(100)
-                spawn('Enemy', [expr('Math.floor(Math.random() * 640 / 8) * 8'), expr('Math.floor(Math.random() * 480 / 8) * 8')])
-            endloop()
-            spawn('Player', [640 / 2, 480 / 2])
             end()
 
-            label('shoot', ['@x', '@y', '@dir'])
-                spawn('Bullet', [val('@x'), val('@y'), val('@dir')])
-            end()
-        });
-        board.execute();
+            label('stop')
+            die()
+        })
+    });
+    board.run(function () {
+        loop(100)
+            spawn('Enemy', [expr('Math.floor(Math.random() * 640 / 8) * 8'), expr('Math.floor(Math.random() * 480 / 8) * 8')])
+        endloop()
+        spawn('Player', [640 / 2, 480 / 2])
+        end()
 
-        requestAnimFrame(update);
-    }
+        label('shoot', ['@x', '@y', '@dir'])
+            spawn('Bullet', [val('@x'), val('@y'), val('@dir')])
+        end()
+    });
+    board.execute();
+
+    requestAnimFrame(update);
 }
 
 window.onload = initialize;
