@@ -207,7 +207,7 @@ Block.prototype.injectArguments = function (varArgs) {
 
 IfBlock = function () {
     Block.apply(this);
-    
+
     this.conditionIdxs = [];
     this.currentCondition = 0;
 }
@@ -226,18 +226,18 @@ IfBlock.prototype.addBranch = function (command) {
 
 IfBlock.prototype.nextCondition = function () {
     this.currentCondition++;
-    
+
     if (this.currentCondition === this.conditionIdxs.length) {
         return false;
     }
-    
+
     this.index = this.conditionIdxs[this.currentCondition];
     return true;
 }
 
 LoopBlock = function (count) {
     Block.apply(this);
-    
+
     this.count = count || 0;
     this.execCount = 0;
     this.currentCount = 0;
@@ -646,7 +646,7 @@ PIXICommandSet.parseCommands = function (parser, entity) {
 PIXICommandSet.runCommands = function (entity) {
     var pixi = {
         __init__: function (params) {
-            var obj = new TileSprite(entity.name, params.tiles, params.width, params.height);
+            var obj = new TileSprite(window.textureCache, entity.name, params.tiles, params.width, params.height);
             obj.position.x = params.x;
             obj.position.y = params.y;
             window.stage.addChild(obj);

@@ -1,19 +1,3 @@
-TileSprite = function (name, tiles, width, height) {
-    PIXI.Sprite.apply(this, [textureCache.fetch(name, tiles, width, height)]);
-    this.tiles = tiles;
-    this.tileWidth = width;
-    this.tileHeight = height;
-}
-
-TileSprite.prototype = Object.create(PIXI.Sprite.prototype);
-
-TileSprite.prototype.draw = function () {
-    //var context = objCanvas.getContext('2d');
-    //context.drawImage(cacheCanvas, 0, 0, this.realWidth, this.realHeight,
-    //    this.position.x, this.position.y, this.realWidth, this.realHeight);
-    //this.setTiles(this.tiles, this.tileWidth, this.tileHeight);
-}
-
 function Tile(attrs) {
     this.fg = attrs.fg || 0x000000;
     this.bg = attrs.bg || 0x000000;
@@ -37,68 +21,30 @@ TilePalette.prototype.convertToTiles = function (entries) {
     return mapTiles;
 }
 
-function TileMap(canvas, tiles, width, height) {
-    this.baseTexture = PIXI.Texture.fromCanvas(canvas);
-    this.canvas = canvas;
+function TileSprite(cache, name, tiles, width, height) {
+    PIXI.Sprite.apply(this, [cache.fetch(name, tiles, width, height)]);
 
-    PIXI.Sprite.apply(this, [this.baseTexture]);
-
-    this.tiles = [];
-    this.tileWidth = 0;
-    this.tileHeight = 0;
-}
-
-TileMap.prototype = Object.create(PIXI.Sprite.prototype);
-
-TileMap.prototype.setTiles = function (tiles, width, height) {
     this.tiles = tiles;
     this.tileWidth = width;
     this.tileHeight = height;
 }
 
-TileMap.prototype.getTile = function (tileX, tileY) {
+TileSprite.prototype = Object.create(PIXI.Sprite.prototype);
+
+TileSprite.prototype.setTiles = function (tiles, width, height) {
+    this.tiles = tiles;
+    this.tileWidth = width;
+    this.tileHeight = height;
+}
+
+TileSprite.prototype.getTile = function (tileX, tileY) {
     if (tileX > this.tileWidth - 1 || tileY > this.tileHeight - 1) {
         return null;
     }
     return this.tiles[this.tileWidth * tileY + tileX];
 }
 
-TileMap.prototype.draw = function () {
-    var ctx = this.canvas.getContext('2d');
-    for (var y = 0; y < this.tileHeight; y++) {
-        for (var x = 0; x < this.tileWidth; x++) {
-            var tile = this.tiles[(x * this.tileWidth) + y];
-
-            ctx.drawImage(
-                TILESET,
-                (tile.char % 16) * 8, Math.floor(tile.char / 16) * 8,
-                8, 8,
-                x * 8, y * 8,
-                8, 8);
-
-            //Tint white and black pixels with tile's foreground and background color, respectively
-            var fgRgb = {r: (tile.fg >> 16) & 0xFF, g: (tile.fg >> 8) & 0xFF, b: tile.fg & 0xFF};
-            var bgRgb = {r: (tile.bg >> 16) & 0xFF, g: (tile.bg >> 8) & 0xFF, b: tile.bg & 0xFF};
-            var imageData = ctx.getImageData(x * 8, y * 8, 8, 8);
-            var pixels = imageData.data;
-            for (var i = 0; i < pixels.length; i += 4) {
-                if (pixels[i] > 0 && pixels[i+1] > 0 && pixels[i+2] > 0) {
-                    pixels[i] = fgRgb.r;
-                    pixels[i+1] = fgRgb.g;
-                    pixels[i+2] = fgRgb.b;
-                }
-                else {
-                    pixels[i] = bgRgb.r;
-                    pixels[i+1] = bgRgb.g;
-                    pixels[i+2] = bgRgb.b;
-                }
-            }
-            ctx.putImageData(imageData, x * 8, y * 8);
-        }
-    }
-}
-
-TileMap.prototype.getTilesInRect = function (rect) {
+TileSprite.prototype.getTilesInRect = function (rect) {
     var tiles = [];
     for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
         for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
@@ -109,7 +55,7 @@ TileMap.prototype.getTilesInRect = function (rect) {
     return tiles;
 }
 
-TileMap.prototype.anyTileInRect = function (rect) {
+TileSprite.prototype.anyTileInRect = function (rect) {
     for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
         for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
             var tile = this.getTile(x / 8, y / 8);
@@ -205,23 +151,45 @@ TextureCache.prototype.fetch = function (name, tiles, width, height) {
             return null;
         }
 
-        this.setTiles(tiles, coord.x, coord.y, width, height);
+        this.drawTiles(tiles, coord.x, coord.y, width, height);
         this.cache[name] = new PIXI.Texture(this.baseTexture, new PIXI.Rectangle(coord.x, coord.y, 8*width, 8*height));
     }
     return this.cache[name];
 }
 
-TextureCache.prototype.setTiles = function (tiles, x, y, width, height) {
-    var context = this.canvas.getContext('2d');
-    for (var i = 0; i < height; i++) {
-        for (var j = 0; j < width; j++) {
-            var tileId = tiles[(i * width) + j];
-            context.drawImage(
+TextureCache.prototype.drawTiles = function (tiles, x, y, width, height) {
+    var ctx = this.canvas.getContext('2d');
+    for (var iy = 0; iy < height; iy++) {
+        for (var ix = 0; ix < width; ix++) {
+            var tile = tiles[(ix * width) + iy];
+            var destX = x + ix * 8;
+            var destY = y + iy * 8;
+
+            ctx.drawImage(
                 TILESET,
-                (tileId % 16) * 8, Math.floor(tileId / 16) * 8,
+                (tile.char % 16) * 8, Math.floor(tile.char / 16) * 8,
                 8, 8,
-                x + j * 8, y + i * 8,
+                destX, destY,
                 8, 8);
+
+            //Tint white and black pixels with tile's foreground and background color, respectively
+            var fgRgb = {r: (tile.fg >> 16) & 0xFF, g: (tile.fg >> 8) & 0xFF, b: tile.fg & 0xFF};
+            var bgRgb = {r: (tile.bg >> 16) & 0xFF, g: (tile.bg >> 8) & 0xFF, b: tile.bg & 0xFF};
+            var imageData = ctx.getImageData(destX, destY, 8, 8);
+            var pixels = imageData.data;
+            for (var i = 0; i < pixels.length; i += 4) {
+                if (pixels[i] > 0 && pixels[i+1] > 0 && pixels[i+2] > 0) {
+                    pixels[i] = fgRgb.r;
+                    pixels[i+1] = fgRgb.g;
+                    pixels[i+2] = fgRgb.b;
+                }
+                else {
+                    pixels[i] = bgRgb.r;
+                    pixels[i+1] = bgRgb.g;
+                    pixels[i+2] = bgRgb.b;
+                }
+            }
+            ctx.putImageData(imageData, destX, destY);
         }
     }
 }
@@ -660,6 +628,7 @@ var textureCache = null;
 var tilePalette = null;
 var tileMap = null;
 var tileMapCanvas = null;
+var tileMapCache = null;
 
 function update() {
     window.board.step();
@@ -700,42 +669,50 @@ function run() {
 
     tilePalette = new TilePalette();
     tilePalette.setEntry(0, new Tile({fg: 0x000000, bg: 0x000000, char: 0}));
-    tilePalette.setEntry(219, new Tile({fg: 0xFF0000, bg: 0x00FF00, char: 100}));
+    tilePalette.setEntry(1, new Tile({fg: 0xFF0000, bg: 0x00FF00, char: 100}));
+    tilePalette.setEntry(2, new Tile({fg: 0xFF0000, bg: 0x000000, char: 219}));
+    tilePalette.setEntry(3, new Tile({fg: 0x0000FF, bg: 0x000000, char: 219}));
+    tilePalette.setEntry(4, new Tile({fg: 0xFFFFFF, bg: 0x000000, char: 7}));
 
     tileMapCanvas = document.createElement('canvas');
     tileMapCanvas.width = 640;
     tileMapCanvas.height = 480;
+    tileMapCanvas.style.backgroundColor = 0x000000;
+    document.body.appendChild(tileMapCanvas);
 
-    tileMap = new TileMap(tileMapCanvas);
-    window.stage.addChild(tileMap);
+    tileMapCache = new TextureCache(tileMapCanvas);
 
     var tiles = tilePalette.convertToTiles(
-      [219, 219, 219, 219, 219,
-       219, 0  , 0  , 0  , 219,
-       219, 0  , 0  , 0  , 219,
-       219, 0  , 0  , 0  , 219,
-       219, 219, 219, 219, 219]);
-    tileMap.setTiles(tiles, 5, 5);
-    tileMap.draw();
+      [1, 1, 1, 1, 1,
+       1, 0, 0, 0, 1,
+       1, 0, 0, 0, 1,
+       1, 0, 0, 0, 1,
+       1, 1, 1, 1, 1]);
+    tileMap = new TileSprite(tileMapCache, "map", tiles, 5, 5);
+    tileMap.position.x = 0;
+    tileMap.position.y = 0;
+    window.stage.addChild(tileMap);
 
     window.spatial = new Spatial(new GridHash(32));
 
     window.sprites = {
         player: {
-            tiles: [219, 219,
-                    219, 219],
+            tiles: tilePalette.convertToTiles(
+                [3, 3,
+                 3, 3]),
             width: 2, height: 2,
             x: 320, y: 240
         },
         enemy: {
-            tiles: [219, 219, 219,
-                    219, 219, 219,
-                    219, 219, 219],
+            tiles: tilePalette.convertToTiles(
+                [2, 2, 2,
+                 2, 2, 2,
+                 2, 2, 2]),
             width: 3, height: 3,
             x: 0, y: 0
         },
         bullet: {
-            tiles: [7],
+            tiles: tilePalette.convertToTiles([4]),
             width: 1, height: 1,
             x: 0, y: 0
         }
@@ -759,7 +736,6 @@ function run() {
             adopt('pixi', sprites.player)
             adopt('input')
             body.move_to(val('@x'), val('@y'))
-            pixi.color(0x0000FF)
             jump('move')
             end()
 
@@ -794,7 +770,6 @@ function run() {
             adopt('body', { bounds: new PIXI.Rectangle(0, 0, 24, 24), spatial: spatial})
             adopt('pixi', sprites.enemy)
             body.move_to(val('@x'), val('@y'))
-            pixi.color(0xFF0000)
             pixi.alpha(0.5)
             jump('move')
             end()
