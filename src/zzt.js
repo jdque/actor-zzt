@@ -729,7 +729,7 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
                     blocked = true;
                 }
 
-                var tileMapCollide = window.tileMap.anyTileInRect(entity.body.bounds);
+                var tileMapCollide = entity.board.boardEntity.pixiObject.anyTileInRect(entity.body.bounds);
                 if (tileMapCollide) {
                     blocked = true;
                 }
@@ -824,7 +824,7 @@ PhysicsCommandSet.runCommands = function (entity) {
                 entity.body.bounds.y -= dy;
             }
 
-            if (window.tileMap.anyTileInRect(entity.body.bounds)) {
+            if (entity.board.boardEntity.pixiObject.anyTileInRect(entity.body.bounds)) {
                 entity.body.bounds.x -= dx;
                 entity.body.bounds.y -= dy;
             }

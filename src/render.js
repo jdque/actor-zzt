@@ -643,11 +643,7 @@ var renderer = new PIXI.CanvasRenderer(WIDTH, HEIGHT);
 var TILESET = null;
 var cacheCanvas = null;
 var textureCache = null;
-
 var tilePalette = null;
-var tileMap = null;
-var tileMapCanvas = null;
-var tileMapCache = null;
 
 function update() {
     window.board.step();
@@ -682,9 +678,7 @@ function run() {
 
     cacheCanvas = document.createElement('canvas');
     cacheCanvas.width = 640;
-    cacheCanvas.height = 480;
-    cacheCanvas.style.backgroundColor = 0x000000;
-    document.body.appendChild(cacheCanvas);
+    cacheCanvas.height = 640;
 
     textureCache = new TextureCache(cacheCanvas);
 
@@ -694,23 +688,6 @@ function run() {
     tilePalette.setEntry(2, new Tile({fg: 0xFF0000, bg: 0x000000, char: 219}));
     tilePalette.setEntry(3, new Tile({fg: 0x0000FF, bg: 0x000000, char: 219}));
     tilePalette.setEntry(4, new Tile({fg: 0xFFFFFF, bg: 0x000000, char: 7}));
-
-    tileMapCanvas = document.createElement('canvas');
-    tileMapCanvas.width = 640;
-    tileMapCanvas.height = 480;
-
-    tileMapCache = new TextureCache(tileMapCanvas);
-
-    var tiles = tilePalette.convertToTiles(
-      [1, 1, 1, 1, 1,
-       1, 0, 0, 0, 1,
-       1, 0, 0, 0, 1,
-       1, 0, 0, 0, 1,
-       1, 1, 1, 1, 1]);
-    tileMap = new TileSprite(tileMapCache, "map", tiles, 5, 5);
-    tileMap.position.x = 0;
-    tileMap.position.y = 0;
-    window.stage.addChild(tileMap);
 
     window.spatial = new Spatial(new GridHash(32));
 
@@ -733,6 +710,19 @@ function run() {
         bullet: {
             tiles: tilePalette.convertToTiles([4]),
             width: 1, height: 1,
+            x: 0, y: 0
+        }
+    }
+
+    window.tilemaps = {
+        board: {
+            tiles: tilePalette.convertToTiles(
+                [1, 1, 1, 1, 1,
+                 1, 0, 0, 0, 1,
+                 1, 0, 0, 0, 1,
+                 1, 0, 0, 0, 1,
+                 1, 1, 1, 1, 1]),
+            width: 5, height: 5,
             x: 0, y: 0
         }
     }
@@ -826,6 +816,7 @@ function run() {
         })
     });
     board.run(function () {
+        adopt('pixi', tilemaps.board)
         loop(100)
             spawn('Enemy', [expr('Math.floor(Math.random() * 640 / 8) * 8'), expr('Math.floor(Math.random() * 480 / 8) * 8')])
         endloop()
