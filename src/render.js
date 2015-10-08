@@ -22,8 +22,10 @@ TilePalette.prototype.convertToTiles = function (entries) {
 }
 
 function TileSprite(cache, name, tiles, width, height) {
-    PIXI.Sprite.apply(this, [cache.fetch(name, tiles, width, height)]);
+    PIXI.Sprite.apply(this, [cache.cacheTiles(name, tiles, width, height)]);
 
+    this.name = name;
+    this.cache = cache;
     this.tiles = tiles;
     this.tileWidth = width;
     this.tileHeight = height;
@@ -32,6 +34,8 @@ function TileSprite(cache, name, tiles, width, height) {
 TileSprite.prototype = Object.create(PIXI.Sprite.prototype);
 
 TileSprite.prototype.setTiles = function (tiles, width, height) {
+    this.cache.updateTiles(this.name, tiles, width, height);
+
     this.tiles = tiles;
     this.tileWidth = width;
     this.tileHeight = height;
@@ -144,7 +148,7 @@ TextureCache.prototype.getNextCoord = function (width, height) {
     return traverse(this.binTree, 0);
 }
 
-TextureCache.prototype.fetch = function (name, tiles, width, height) {
+TextureCache.prototype.cacheTiles = function (name, tiles, width, height) {
     if (!this.cache[name]) {
         var coord = this.getNextCoord(8*width, 8*height);
         if (!coord) {
@@ -152,9 +156,24 @@ TextureCache.prototype.fetch = function (name, tiles, width, height) {
         }
 
         this.drawTiles(tiles, coord.x, coord.y, width, height);
-        this.cache[name] = new PIXI.Texture(this.baseTexture, new PIXI.Rectangle(coord.x, coord.y, 8*width, 8*height));
+        this.cache[name] = {
+            texture: new PIXI.Texture(this.baseTexture, new PIXI.Rectangle(coord.x, coord.y, 8*width, 8*height)),
+            x: coord.x,
+            y: coord.y
+        };
     }
-    return this.cache[name];
+    return this.cache[name].texture;
+}
+
+TextureCache.prototype.updateTiles = function (name, tiles, width, height) {
+    if (!this.cache[name]) {
+        return;
+    }
+
+    var x = this.cache[name].x;
+    var y = this.cache[name].y;
+
+    this.drawTiles(tiles, x, y, width, height);
 }
 
 TextureCache.prototype.drawTiles = function (tiles, x, y, width, height) {
@@ -663,7 +682,9 @@ function run() {
 
     cacheCanvas = document.createElement('canvas');
     cacheCanvas.width = 640;
-    cacheCanvas.height = 960;
+    cacheCanvas.height = 480;
+    cacheCanvas.style.backgroundColor = 0x000000;
+    document.body.appendChild(cacheCanvas);
 
     textureCache = new TextureCache(cacheCanvas);
 
@@ -677,8 +698,6 @@ function run() {
     tileMapCanvas = document.createElement('canvas');
     tileMapCanvas.width = 640;
     tileMapCanvas.height = 480;
-    tileMapCanvas.style.backgroundColor = 0x000000;
-    document.body.appendChild(tileMapCanvas);
 
     tileMapCache = new TextureCache(tileMapCanvas);
 
