@@ -148,7 +148,7 @@ Scope.prototype.board = function (entity) {
     return entity.board.getEntity();
 }
 
-Scope.prototype.execute = function (entity) {
+Scope.prototype.evaluate = function (entity) {
     return this.scopeFunc(entity, this.children, this.parent, this.board) || [];
 }
 
@@ -520,7 +520,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
     },
 
     send: function (scope, label, varArgs) {
-        var objects = scope.execute(entity);
+        var objects = scope.evaluate(entity);
         for (var i = 0; i < objects.length; i++) {
             objects[i].gotoLabel(label, varArgs);
         }
