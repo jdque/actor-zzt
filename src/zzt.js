@@ -567,24 +567,34 @@ DefaultCommandSet.runCommands = function (entity) { return {
     },
 
     spawn: function (objName, initVarArgs) {
-        entity.board.spawnObject(objName, entity, initVarArgs);
+        var evaluatedArgs = [];
+        for (var i = 0; i < initVarArgs.length; i++) {
+            evaluatedArgs.push((initVarArgs[i] instanceof Evaluable) ? initVarArgs[i].evaluate() : initVarArgs[i]);
+        }
+
+        entity.board.spawnObject(objName, entity, evaluatedArgs);
     },
 
     die: function () {
         entity.locked = true;
         entity.ended = true;
         entity.cycleEnded = true;
-
-        entity.adoptions.forEach(function (commandSet) {
-           commandSet.__destroy__();
-        });
-        entity.adoptions = [];
+        entity.destroyAdoptions();
 
         entity.board.removeObject(entity);
     },
 
     become: function (name, initVarArgs) {
-        entity.board.replaceObject(entity, name, initVarArgs);
+        var evaluatedArgs = [];
+        for (var i = 0; i < initVarArgs.length; i++) {
+            evaluatedArgs.push((initVarArgs[i] instanceof Evaluable) ? initVarArgs[i].evaluate() : initVarArgs[i]);
+        }
+
+        entity.ended = true;
+        entity.cycleEnded = true;
+        entity.destroyAdoptions();
+
+        entity.board.replaceObject(entity, name, evaluatedArgs);
     },
 
     exec: function (func) {
@@ -998,6 +1008,13 @@ Entity.prototype.execute = function () {
         if (this.cycleEnded || this.ended)
             break;
     }
+}
+
+Entity.prototype.destroyAdoptions = function () {
+    this.adoptions.forEach(function (commandSet) {
+       commandSet.__destroy__();
+    });
+    this.adoptions = [];
 }
 
 Board = function () {
