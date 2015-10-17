@@ -1,217 +1,5 @@
-function Tile(attrs) {
-    this.fg = attrs.fg || 0x000000;
-    this.bg = attrs.bg || 0x000000;
-    this.char = attrs.char || 0;
-}
-
-function TilePalette() {
-    this.palette = {};
-}
-
-TilePalette.prototype.setEntry = function (id, tile) {
-    this.palette[id] = tile;
-}
-
-TilePalette.prototype.convertToTiles = function (entries) {
-    var mapTiles = [];
-    for (var i = 0; i < entries.length; i++) {
-        mapTiles.push(this.palette[entries[i]]);
-    }
-
-    return mapTiles;
-}
-
-function TileSprite(cache, name, tiles, width, height) {
-    PIXI.Sprite.apply(this, [cache.cacheTiles(name, tiles, width, height)]);
-
-    this.name = name;
-    this.cache = cache;
-    this.tiles = tiles;
-    this.tileWidth = width;
-    this.tileHeight = height;
-}
-
-TileSprite.prototype = Object.create(PIXI.Sprite.prototype);
-
-TileSprite.prototype.setTiles = function (tiles, width, height) {
-    this.cache.updateTiles(this.name, tiles, width, height);
-
-    this.tiles = tiles;
-    this.tileWidth = width;
-    this.tileHeight = height;
-}
-
-TileSprite.prototype.getTile = function (tileX, tileY) {
-    if (tileX > this.tileWidth - 1 || tileY > this.tileHeight - 1) {
-        return null;
-    }
-    return this.tiles[this.tileWidth * tileY + tileX];
-}
-
-TileSprite.prototype.getTilesInRect = function (rect) {
-    var tiles = [];
-    for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
-        for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
-            tiles.push(this.getTile(x / 8, y / 8));
-        }
-    }
-
-    return tiles;
-}
-
-TileSprite.prototype.anyTileInRect = function (rect) {
-    for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
-        for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
-            var tile = this.getTile(x / 8, y / 8);
-            if (tile && tile.char !== 0) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function TextureCache(canvas) {
-    this.baseTexture = PIXI.Texture.fromCanvas(canvas);
-    this.canvas = canvas;
-    this.cache = {};
-    this.binTree = {
-        rect: new PIXI.Rectangle(0, 0, this.canvas.width, this.canvas.height),
-        used: false,
-        left: null,
-        right: null
-    };
-}
-
-TextureCache.prototype.getNextCoord = function (width, height) {
-    function traverse(node, depth) {
-        if (!node.left && !node.right) { //is leaf
-            if (node.used || width > node.rect.width || height > node.rect.height) { //is occupied or doesn't fit
-                return null;
-            }
-
-            var lRect, llRect, lrRect, rRect;
-            if (depth % 2 === 0) { //split along x axis first
-                lRect = new PIXI.Rectangle(node.rect.x, node.rect.y, node.rect.width, height);
-                llRect = new PIXI.Rectangle(node.rect.x, node.rect.y, width, height);
-                lrRect = new PIXI.Rectangle(node.rect.x + width, node.rect.y, node.rect.width - width, height);
-                rRect = new PIXI.Rectangle(node.rect.x, node.rect.y + height, node.rect.width, node.rect.height - height);
-            }
-            else { //split along y axis first
-                lRect = new PIXI.Rectangle(node.rect.x, node.rect.y, width, node.rect.height);
-                llRect = new PIXI.Rectangle(node.rect.x, node.rect.y, width, height);
-                lrRect = new PIXI.Rectangle(node.rect.x, node.rect.y + height, width, node.rect.height - height);
-                rRect = new PIXI.Rectangle(node.rect.x + width, node.rect.y, node.rect.width - width, node.rect.height);
-            }
-
-            node.left = {
-                rect: lRect,
-                used: false,
-                left: {
-                    rect: llRect,
-                    used: true,
-                    left: null,
-                    right: null
-                },
-                right: {
-                    rect: lrRect,
-                    used: false,
-                    left: null,
-                    right: null
-                }
-            }
-            node.right = {
-                rect: rRect,
-                used: false,
-                left: null,
-                right: null
-            }
-
-            return {x: node.rect.x, y: node.rect.y};
-        }
-        else { //is branch
-            var coord = null;
-            coord = traverse(node.left, depth + 1);
-            if (coord) {
-                return coord;
-            }
-            coord = traverse(node.right, depth + 1);
-            if (coord) {
-                return coord;
-            }
-
-            return null;
-        }
-    }
-
-    return traverse(this.binTree, 0);
-}
-
-TextureCache.prototype.cacheTiles = function (name, tiles, width, height) {
-    if (!this.cache[name]) {
-        var coord = this.getNextCoord(8*width, 8*height);
-        if (!coord) {
-            return null;
-        }
-
-        this.drawTiles(tiles, coord.x, coord.y, width, height);
-        this.cache[name] = {
-            texture: new PIXI.Texture(this.baseTexture, new PIXI.Rectangle(coord.x, coord.y, 8*width, 8*height)),
-            x: coord.x,
-            y: coord.y
-        };
-    }
-    return this.cache[name].texture;
-}
-
-TextureCache.prototype.updateTiles = function (name, tiles, width, height) {
-    if (!this.cache[name]) {
-        return;
-    }
-
-    var x = this.cache[name].x;
-    var y = this.cache[name].y;
-
-    this.drawTiles(tiles, x, y, width, height);
-}
-
-TextureCache.prototype.drawTiles = function (tiles, x, y, width, height) {
-    var ctx = this.canvas.getContext('2d');
-    for (var iy = 0; iy < height; iy++) {
-        for (var ix = 0; ix < width; ix++) {
-            var tile = tiles[(ix * width) + iy];
-            var destX = x + ix * 8;
-            var destY = y + iy * 8;
-
-            ctx.drawImage(
-                TILESET,
-                (tile.char % 16) * 8, Math.floor(tile.char / 16) * 8,
-                8, 8,
-                destX, destY,
-                8, 8);
-
-            //Tint white and black pixels with tile's foreground and background color, respectively
-            var fgRgb = {r: (tile.fg >> 16) & 0xFF, g: (tile.fg >> 8) & 0xFF, b: tile.fg & 0xFF};
-            var bgRgb = {r: (tile.bg >> 16) & 0xFF, g: (tile.bg >> 8) & 0xFF, b: tile.bg & 0xFF};
-            var imageData = ctx.getImageData(destX, destY, 8, 8);
-            var pixels = imageData.data;
-            for (var i = 0; i < pixels.length; i += 4) {
-                if (pixels[i] > 0 && pixels[i+1] > 0 && pixels[i+2] > 0) {
-                    pixels[i] = fgRgb.r;
-                    pixels[i+1] = fgRgb.g;
-                    pixels[i+2] = fgRgb.b;
-                }
-                else {
-                    pixels[i] = bgRgb.r;
-                    pixels[i+1] = bgRgb.g;
-                    pixels[i+2] = bgRgb.b;
-                }
-            }
-            ctx.putImageData(imageData, destX, destY);
-        }
-    }
-}
+var PIXI = require('lib/pixi.dev.js');
+var ZZT = require('src/zzt.js');
 
 function GridHash(cellSize) {
     this.cellSize = cellSize || 64;
@@ -636,200 +424,180 @@ Spatial.prototype.query = function () {
     })(this);
 }
 
-var WIDTH = 640;
-var HEIGHT = 480;
-var stage = new PIXI.Stage(0x000000);
-var renderer = new PIXI.CanvasRenderer(WIDTH, HEIGHT);
-var TILESET = null;
-var cacheCanvas = null;
-var textureCache = null;
-var tilePalette = null;
+var PhysicsCommandSet = {};
 
-function update() {
-    window.board.step();
+PhysicsCommandSet.getDirectionDelta = function (dir, entity) {
+    var dx = 0;
+    var dy = 0;
 
-    window.renderer.render(stage);
-
-    requestAnimFrame(update);
-}
-
-function testTexturePacking() {
-    for (var i = 0; i < 100; i++) {
-        var w = Math.floor(Math.random() * 30);
-        var h = Math.floor(Math.random() * 30);
-        var tile = Math.floor(Math.random() * 128);
-        var tiles = [];
-        for (var j = 0; j < w * h; j++) {
-            tiles.push(tile);
-        }
-        var tex = textureCache.fetch(i.toString(), tiles, w, h);
-        if (!tex) console.log("couldnt fit")
+    if (dir === 'flow') {
+        return entity.body.lastDelta;
     }
+
+    switch(dir) {
+        case 'n':
+            dy = -8;
+            break;
+        case 's':
+            dy = 8;
+            break;
+        case 'w':
+            dx = -8;
+            break;
+        case 'e':
+            dx = 8;
+            break;
+        case 'rnd':
+            var dir = Math.floor(Math.random() * 4);
+            if      (dir === 0) { dy = -8; }
+            else if (dir === 1) { dy = 8;  }
+            else if (dir === 2) { dx = -8; }
+            else                { dx = 8;  }
+            break;
+    }
+
+    return {dx: dx, dy: dy};
 }
 
-function initialize() {
-    TILESET = document.createElement('img');
-    TILESET.onload = run;
-    TILESET.src = 'assets/tileset.bmp';
-}
+PhysicsCommandSet.parseCommands = function (parser, entity) {
+    var body = {
+        blocked: function (dir) {
+            return new ZZT.DeferredFunction(function () {
+                var blocked = false;
+                var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
 
-function run() {
-    document.body.appendChild(renderer.view);
+                entity.body.bounds.x += delta.dx;
+                entity.body.bounds.y += delta.dy;
 
-    cacheCanvas = document.createElement('canvas');
-    cacheCanvas.width = 640;
-    cacheCanvas.height = 640;
+                var objs = entity.body.spatial.getIntersect(entity.body.bounds);
+                if (objs.length > 1) {
+                    blocked = true;
+                }
 
-    textureCache = new TextureCache(cacheCanvas);
+                var tileMapCollide = entity.board.boardEntity.pixiObject.anyTileInRect(entity.body.bounds);
+                if (tileMapCollide) {
+                    blocked = true;
+                }
 
-    tilePalette = new TilePalette();
-    tilePalette.setEntry(0, new Tile({fg: 0x000000, bg: 0x000000, char: 0}));
-    tilePalette.setEntry(1, new Tile({fg: 0xFF0000, bg: 0x00FF00, char: 100}));
-    tilePalette.setEntry(2, new Tile({fg: 0xFF0000, bg: 0x000000, char: 219}));
-    tilePalette.setEntry(3, new Tile({fg: 0x0000FF, bg: 0x000000, char: 219}));
-    tilePalette.setEntry(4, new Tile({fg: 0xFFFFFF, bg: 0x000000, char: 7}));
+                entity.body.bounds.x -= delta.dx;
+                entity.body.bounds.y -= delta.dy;
 
-    window.spatial = new Spatial(new GridHash(32));
-
-    window.sprites = {
-        player: {
-            tiles: tilePalette.convertToTiles(
-                [3, 3,
-                 3, 3]),
-            width: 2, height: 2,
-            x: 320, y: 240
+                return blocked;
+            }, entity);
         },
-        enemy: {
-            tiles: tilePalette.convertToTiles(
-                [2, 2, 2,
-                 2, 2, 2,
-                 2, 2, 2]),
-            width: 3, height: 3,
-            x: 0, y: 0
+
+        dir: function (dir) {
+            return {
+                evaluate: function (entity) {
+                    var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
+                    var objs = entity.body.spatial.query()
+                        .distance(entity.body.bounds, 1)
+                        .direction(entity.body.bounds, delta.dx / 8, delta.dy / 8)
+                        .get();
+                    return objs;
+                }
+            };
         },
-        bullet: {
-            tiles: tilePalette.convertToTiles([4]),
-            width: 1, height: 1,
-            x: 0, y: 0
+
+        move_to: parser._defaultParseFunc(entity.commands.body.move_to),
+        move_by: parser._defaultParseFunc(entity.commands.body.move_by),
+
+        move: function (dirStr) {
+            var dirs = dirStr.split('/');
+            for (var i = 0; i < dirs.length; i++) {
+                if (dirs[i].length === 0)
+                    continue;
+
+                parser.currentBlock.add(entity.commands.body.move.fastBind(entity, dirs[i]));
+                parser.commands.wait(5);
+            }
         }
-    }
+    };
 
-    window.tilemaps = {
-        board: {
-            tiles: tilePalette.convertToTiles(
-                [1, 1, 1, 1, 1,
-                 1, 0, 0, 0, 1,
-                 1, 0, 0, 0, 1,
-                 1, 0, 0, 0, 1,
-                 1, 1, 1, 1, 1]),
-            width: 5, height: 5,
-            x: 0, y: 0
+    return {
+        body: body
+    };
+};
+
+PhysicsCommandSet.runCommands = function (entity) {
+    var body = {
+        __init__: function (params) {
+            entity.body = {
+                bounds: params.bounds.clone(),
+                spatial: params.spatial,
+                lastDelta: {dx: 0, dy: 0}
+            };
+
+            entity.body.spatial.register(entity);
+        },
+
+        __destroy__: function () {
+            entity.body.spatial.unregister(entity);
+            entity.body = null;
+        },
+
+        move_to: function (x, y) {
+            if (!entity.body)
+                return;
+
+            var x = x instanceof ZZT.Evaluable ? x.evaluate() : x;
+            var y = y instanceof ZZT.Evaluable ? y.evaluate() : y;
+
+            entity.body.bounds.x = x;
+            entity.body.bounds.y = y;
+            entity.body.spatial.update(entity);
+
+            if (entity.pixiObject) {
+                entity.pixiObject.position.x = entity.body.bounds.x;
+                entity.pixiObject.position.y = entity.body.bounds.y;
+            }
+        },
+
+        move_by: function (dx, dy) {
+            if (!entity.body)
+                return;
+
+            var dx = dx instanceof ZZT.Evaluable ? dx.evaluate() : dx;
+            var dy = dy instanceof ZZT.Evaluable ? dy.evaluate() : dy;
+
+            entity.body.bounds.x += dx;
+            entity.body.bounds.y += dy;
+
+            var objs = entity.body.spatial.getIntersect(entity.body.bounds);
+            if (objs.length > 1) {
+                entity.body.bounds.x -= dx;
+                entity.body.bounds.y -= dy;
+            }
+
+            if (entity.board.boardEntity.pixiObject.anyTileInRect(entity.body.bounds)) {
+                entity.body.bounds.x -= dx;
+                entity.body.bounds.y -= dy;
+            }
+
+            entity.body.spatial.update(entity);
+
+            if (entity.pixiObject) {
+                entity.pixiObject.position.x = entity.body.bounds.x;
+                entity.pixiObject.position.y = entity.body.bounds.y;
+            }
+        },
+
+        move: function (dir) {
+            var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
+            entity.commands.body.move_by(delta.dx, delta.dy);
+            entity.body.lastDelta = delta;
         }
-    }
+    };
 
-    RenderParser = new Parser();
-    RenderParser.registerModule('default', DefaultCommandSet);
-    RenderParser.registerModule('html', DOMCommandSet);
-    RenderParser.registerModule('pixi', PIXICommandSet);
-    RenderParser.registerModule('body', PhysicsCommandSet);
-    RenderParser.registerModule('input', InputCommandSet);
+    return {
+        body: body
+    };
+};
 
-    window.board = new Board();
-    board.configure({
-        autoStep: false,
-        parser: RenderParser
-    });
-    board.setup(function () {
-        object('Player', ['@x', '@y'], function () {
-            adopt('body', { bounds: new PIXI.Rectangle(0, 0, 16, 16), spatial: spatial})
-            adopt('pixi', sprites.player)
-            adopt('input')
-            body.move_to(val('@x'), val('@y'))
-            jump('move')
-            end()
-
-            label('move')
-                _if(input.key_down(38))
-                    body.move('/n')
-                _elif(input.key_down(40))
-                    body.move('/s')
-                _endif()
-
-                _if(input.key_down(37))
-                    body.move('/w')
-                _elif(input.key_down(39))
-                    body.move('/e')
-                _endif()
-
-                _if(input.key_down(32))
-                    send('[parent]', 'shoot', [expr('this.body.bounds.x + this.body.bounds.width'), expr('this.body.bounds.y'), "e"])
-                    wait(5)
-                _endif()
-
-                _if(body.blocked('flow'))
-                    body.move('/i')
-                _endif()
-
-                wait(1)
-                jump('move')
-            end()
-        });
-
-        object('Enemy', ['@x', '@y'], function () {
-            adopt('body', { bounds: new PIXI.Rectangle(0, 0, 24, 24), spatial: spatial})
-            adopt('pixi', sprites.enemy)
-            body.move_to(val('@x'), val('@y'))
-            pixi.alpha(0.5)
-            jump('move')
-            end()
-
-            label('move')
-                body.move('/rnd')
-                jump('move')
-            end()
-
-            label('enemy_stop')
-                print("OUCH")
-            die()
-        });
-
-        object('Bullet', ['@x', '@y', '@dir'], function () {
-            adopt('body', { bounds: new PIXI.Rectangle(0, 0, 8, 8), spatial: spatial})
-            adopt('pixi', sprites.bullet)
-            body.move_to(val('@x'), val('@y'))
-            _if('@dir === "e"')
-                body.move('/e')
-            _endif()
-            jump('loop')
-
-            label('loop')
-                _if(body.blocked('flow'))
-                    send(body.dir('flow'), 'enemy_stop')
-                    jump('stop')
-                _endif()
-                body.move('/flow')
-                jump('loop')
-            end()
-
-            label('stop')
-            die()
-        })
-    });
-    board.run(function () {
-        adopt('pixi', tilemaps.board)
-        loop(100)
-            spawn('Enemy', [expr('Math.floor(Math.random() * 640 / 8) * 8'), expr('Math.floor(Math.random() * 480 / 8) * 8')])
-        endloop()
-        spawn('Player', [640 / 2, 480 / 2])
-        end()
-
-        label('shoot', ['@x', '@y', '@dir'])
-            spawn('Bullet', [val('@x'), val('@y'), val('@dir')])
-        end()
-    });
-    board.execute();
-
-    requestAnimFrame(update);
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+    module.exports = {
+        GridHash: GridHash,
+        Spatial: Spatial,
+        PhysicsCommandSet: PhysicsCommandSet
+    };
 }
-
-window.onload = initialize;

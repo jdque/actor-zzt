@@ -1,51 +1,12 @@
-Util = (function () {
-    var currentId = 0;
+var Util = require('src/util.js');
 
-    function generateId() {
-        return currentId++;
-    }
-
-    function extend(destination, source) {
-        for (var k in source) {
-            if (source.hasOwnProperty(k)) {
-                destination[k] = source[k];
-            }
-        }
-        return destination;
-    }
-
-    return {
-        generateId: generateId,
-        extend: extend
-    };
-})();
-
-Function.prototype.fastBind = function (context) {
-    var self = this;
-    var curriedArgs = Array.prototype.slice.call(arguments, 1);
-    if (curriedArgs.length) {
-        return function () {
-            var allArgs = curriedArgs.slice(0);
-            for (var i = 0, n = arguments.length; i < n; ++i) {
-                allArgs.push(arguments[i]);
-            }
-            self.apply(context, allArgs);
-        };
-    }
-    else {
-        return function () {
-            self.apply(context)
-        }
-    }
-}
-
-Evaluable = function () {
+function Evaluable() {
 }
 
 Evaluable.evaluate = function () {
 }
 
-DeferredFunction = function (func, entity) {
+function DeferredFunction(func, entity) {
     this.entity = entity;
     this.func = func;
 }
@@ -56,7 +17,7 @@ DeferredFunction.prototype.evaluate = function () {
     return this.func.call(this.entity);
 }
 
-Value = function (varStr, entity) {
+function Value(varStr, entity) {
     this.entity = entity;
     this.varStr = varStr;
 }
@@ -72,7 +33,7 @@ Value.prototype.evaluate = function () {
     }
 }
 
-Expression = function (expr, entity) {
+function Expression(expr, entity) {
     this.entity = entity;
     this.expr = new Function(
         'return ' + expr.replace(/\@/g, 'this.executingLabelBlock.variables.').replace(/\$/g, 'this.variables.')
@@ -85,7 +46,7 @@ Expression.prototype.evaluate = function () {
     return this.expr.call(this.entity);
 }
 
-Scope = function (scope) {
+function Scope(scope) {
     var self   = "[obj].forEach(function (obj) {\n";
     var all    = "children(obj).forEach(function (obj) {\n";
     var name   = "children(obj).filter(function (obj) { return obj.name === '{name}'}).forEach(function (obj) {\n";
@@ -152,7 +113,7 @@ Scope.prototype.evaluate = function (entity) {
     return this.scopeFunc(entity, this.children, this.parent, this.board) || [];
 }
 
-Block = function (varParams) {
+function Block(varParams) {
     this._id = Util.generateId().toString();
     this.commands = [];
     this.variableParams = varParams || [];
@@ -205,7 +166,7 @@ Block.prototype.injectArguments = function (varArgs) {
     }
 }
 
-IfBlock = function () {
+function IfBlock() {
     Block.apply(this);
 
     this.conditionIdxs = [];
@@ -235,7 +196,7 @@ IfBlock.prototype.nextCondition = function () {
     return true;
 }
 
-LoopBlock = function (count) {
+function LoopBlock(count) {
     Block.apply(this);
 
     this.count = count || 0;
@@ -268,7 +229,7 @@ LoopBlock.prototype.restart = function () {
     this.index = -1;
 }
 
-LabelBlockGroup = function () {
+function LabelBlockGroup() {
     this.blockRefs = [];
     this.activeBlockIdx = 0;
 }
@@ -294,7 +255,7 @@ LabelBlockGroup.prototype.enablePreviousBlockRef = function () {
         this.activeBlockIdx--;
 }
 
-Parser = function (entity) {
+function Parser(entity) {
     this.currentBlock = null;
     this.blockStack = [];
 
@@ -360,7 +321,291 @@ Parser.prototype.parse = function (entity) {
     this.commands = {};
 }
 
-DefaultCommandSet = {};
+function Entity(board, name, script, initVarParams) {
+    //Properties
+    this.id = Util.generateId().toString();
+    this.board = board;
+    this.name = name;
+    this.script = script;
+    this.initVarParams = initVarParams || [];
+    this.depth = 0;
+    this.parent = null;
+
+    //State
+    this.variables = {};
+    this.adoptions = [];
+    this.ended = false;
+    this.cycleEnded = false;
+    this.locked = false;
+
+    //Execution
+    this.labels = {};
+    this.blocks = [];
+    this.commands = {};
+    this.executingLabelBlock = null;
+    this.executingBlock = null;
+    this.executingBlockStack = [];
+}
+
+Entity.clone = function (entity) {
+    return new Entity(entity.board, entity.name, entity.script, entity.initVarParams);
+}
+
+Entity.prototype.begin = function (initVarArgs) {
+    this.cycleEnded = false;
+    this.gotoLabel('_start', initVarArgs);
+}
+
+Entity.prototype.gotoLabel = function (name, varArgs) {
+    if (this.locked || !this.labels[name])
+        return;
+
+    if (!this.labels[name].getActiveBlockRef())
+        return;
+
+    var blockRef = this.labels[name].getActiveBlockRef();
+    this.executingLabelBlock = this.getBlock(blockRef.blockId);
+    this.executingLabelBlock.reset();
+    this.executingLabelBlock.gotoOffset(blockRef.offset);
+    this.executingLabelBlock.injectArguments(varArgs);
+
+    this.executingBlock = this.executingLabelBlock;
+    this.executingBlockStack = [this.executingBlock];
+
+    this.ended = false;
+    this.cycleEnded = false;
+}
+
+Entity.prototype.createBlock = function (varParams) {
+    var block = new Block(varParams);
+    this.blocks[block.id()] = block;
+
+    return block;
+}
+
+Entity.prototype.getBlock = function (id) {
+    return this.blocks[id];
+}
+
+Entity.prototype.runBlock = function (block) {
+    this.ended = false;
+
+    //new block
+    this.executingBlockStack.push(block);
+    this.executingBlock = this.executingBlockStack[this.executingBlockStack.length - 1];
+    this.executingBlock.reset();
+}
+
+Entity.prototype.runPreviousBlock = function () {
+    this.executingBlockStack.pop();
+    this.executingBlock = this.executingBlockStack[this.executingBlockStack.length - 1];
+}
+
+Entity.prototype.execute = function () {
+    this.cycleEnded = false;
+
+    if (this.ended)
+        return;
+
+    //this.executingBlock.execNext();
+
+    while (this.executingBlock.execNext()) {
+        if (this.cycleEnded || this.ended)
+            break;
+    }
+}
+
+Entity.prototype.destroyAdoptions = function () {
+    this.adoptions.forEach(function (commandSet) {
+       commandSet.__destroy__();
+    });
+    this.adoptions = [];
+}
+
+function Board() {
+    //Setup
+    this.setupFunc = function () {};
+    this.finishFunc = function () {};
+    this.runScript = function () {};
+    this.objects = {};
+    this.autoStep = false;
+    this.parser = null;
+
+    //Execution
+    this.boardEntity = null;
+    this.instances = [{}];
+    this.spawnedObjs = [];
+    this.deletedObjs = [];
+
+    this.terminated = false;
+}
+
+Board.prototype.setup = function (func) {
+    this.setupFunc = func;
+    return this;
+}
+
+Board.prototype.run = function (script) {
+    this.runScript = script;
+    return this;
+}
+
+Board.prototype.finish = function (func) {
+    this.finishFunc = func;
+    return this;
+}
+
+Board.prototype.configure = function (config) {
+    this.autoStep = config.autoStep || false;
+    this.parser = config.parser || new Parser();
+    return this;
+}
+
+Board.prototype.execute = function () {
+    //Run setup
+    (new Function(
+        'var object = this.defineObject.bind(this);' +
+        this.setupFunc.toString().replace("function ()", "")
+    )).call(this);
+
+    //Run root entity script
+    this.boardEntity = new Entity(this, "_board", this.runScript, []);
+    this.boardEntity.depth = 0;
+    this.boardEntity.parent = this.boardEntity;
+    this.parser.parse(this.boardEntity);
+    this.boardEntity.begin();
+    this.instances[0]["_board"] = [];
+    this.instances[0]["_board"].push(this.boardEntity);
+
+    //Begin execution loop
+    if (this.autoStep) {
+        while (!this.terminated) {
+            this.step();
+        }
+    }
+}
+
+Board.prototype.step = function () {
+    if (this.terminated) {
+        return;
+    }
+
+    //Add spawned objects
+    for (var i = 0; i < this.spawnedObjs.length; i++) {
+        if (!this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name])
+            this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name] = [];
+
+        this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name].push(this.spawnedObjs[i]);
+    }
+    this.spawnedObjs = [];
+
+    //Purge dead objects
+    for (var i = 0; i < this.deletedObjs.length; i++) {
+        this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].splice(
+            this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].indexOf(this.deletedObjs[i]), 1);
+    }
+    this.deletedObjs = [];
+
+    //Execute object tree
+    for (var i = this.instances.length - 1; i >= 0; i--) {
+        for (var objName in this.instances[i]) {
+            for (var j = 0; j < this.instances[i][objName].length; j++) {
+                this.instances[i][objName][j].execute();
+            }
+        }
+    }
+
+    if (this.terminated) {
+        this.finishFunc();
+    }
+}
+
+Board.prototype.getEntity = function () {
+    return this.boardEntity;
+}
+
+Board.prototype.defineObject = function (name, varParamsOrScript, script) {
+    if (this.objects[name]) {
+        throw "Duplicate object definition";
+    }
+
+    var obj;
+    if (arguments.length === 3) {
+        obj = new Entity(this, name, script, varParamsOrScript);
+    }
+    else if (arguments.length === 2) {
+        obj = new Entity(this, name, varParamsOrScript, []);
+    }
+    else {
+        throw "Bad object definition";
+    }
+
+    this.objects[name] = obj;
+
+    return obj;
+}
+
+Board.prototype.spawnObject = function (name, parent, initVarArgs) {
+    if (!this.objects[name])
+        return;
+
+    if (parent) {
+        if (this.instances.length <= parent.depth + 1)
+            this.instances.push({});
+    }
+
+    var obj = Entity.clone(this.objects[name]);
+    obj.depth = parent ? parent.depth + 1 : 0;
+    obj.parent = parent || obj;
+    this.parser.parse(obj);
+    obj.begin(initVarArgs);
+
+    this.spawnedObjs.push(obj);
+
+    return obj;
+}
+
+Board.prototype.removeObject = function (entity) {
+    this.deletedObjs.push(entity);
+}
+
+Board.prototype.replaceObject = function (target, newName, initVarArgs) {
+    var newObject = this.spawnObject(this.objects[newName].name, target.parent, initVarArgs);
+
+    var children = this.getChildObjects(target);
+    for (var i = 0; i < children.length; i++) {
+        children[i].parent = newObject;
+    }
+
+    this.removeObject(target);
+}
+
+Board.prototype.getChildObjects = function (entity) {
+    if (entity.depth + 1 >= this.instances.length)
+        return [];
+
+    var children = [];
+
+    for (name in this.instances[entity.depth + 1]) {
+        children = children.concat(this.instances[entity.depth + 1][name].filter(function (child) {
+            return child.parent === entity;
+        }));
+    }
+
+    for (var i = 0; i < this.spawnedObjs.length; i++) {
+        if (this.spawnedObjs[i].parent === entity) {
+            children.push(this.spawnedObjs[i]);
+        }
+    }
+
+    return children;
+}
+
+Board.prototype.terminate = function () {
+    this.terminated = true;
+}
+
+var DefaultCommandSet = {};
 
 DefaultCommandSet.parseCommands = function (parser, entity) { return {
     val: function (varStr) {
@@ -568,8 +813,10 @@ DefaultCommandSet.runCommands = function (entity) { return {
 
     spawn: function (objName, initVarArgs) {
         var evaluatedArgs = [];
-        for (var i = 0; i < initVarArgs.length; i++) {
-            evaluatedArgs.push((initVarArgs[i] instanceof Evaluable) ? initVarArgs[i].evaluate() : initVarArgs[i]);
+        if (initVarArgs instanceof Array) {
+            for (var i = 0; i < initVarArgs.length; i++) {
+                evaluatedArgs.push((initVarArgs[i] instanceof Evaluable) ? initVarArgs[i].evaluate() : initVarArgs[i]);
+            }
         }
 
         entity.board.spawnObject(objName, entity, evaluatedArgs);
@@ -586,8 +833,10 @@ DefaultCommandSet.runCommands = function (entity) { return {
 
     become: function (name, initVarArgs) {
         var evaluatedArgs = [];
-        for (var i = 0; i < initVarArgs.length; i++) {
-            evaluatedArgs.push((initVarArgs[i] instanceof Evaluable) ? initVarArgs[i].evaluate() : initVarArgs[i]);
+        if (initVarArgs instanceof Array) {
+            for (var i = 0; i < initVarArgs.length; i++) {
+                evaluatedArgs.push((initVarArgs[i] instanceof Evaluable) ? initVarArgs[i].evaluate() : initVarArgs[i]);
+            }
         }
 
         entity.ended = true;
@@ -602,608 +851,12 @@ DefaultCommandSet.runCommands = function (entity) { return {
     }
 }};
 
-DOMCommandSet = {};
-
-DOMCommandSet.parseCommands = function (parser, entity) {
-    var html = {
-        exec: parser._defaultParseFunc(entity.commands.html.exec),
-    };
-
-    return {
-        html: html
-    };
-};
-
-DOMCommandSet.runCommands = function (entity) {
-    var html = {
-        __init__: function (params) {
-            entity.element = document.getElementById(params.id) || null;
-            if (entity.element) {
-                entity.element.onclick = function () { entity.gotoLabel('@click') }.fastBind(entity);
-            }
-        },
-
-        __destroy__: function () {
-            entity.element.onclick = null;
-            entity.element = null;
-        },
-
-        exec: function (func) {
-            if (entity.element) {
-                func(entity.element);
-            }
-        }
-    };
-
-    return {
-        html: html
-    };
-};
-
-PIXICommandSet = {};
-
-PIXICommandSet.parseCommands = function (parser, entity) {
-    var pixi = {
-        color: parser._defaultParseFunc(entity.commands.pixi.color),
-        alpha: parser._defaultParseFunc(entity.commands.pixi.alpha)
-    };
-
-    return {
-        pixi: pixi
-    };
-};
-
-PIXICommandSet.runCommands = function (entity) {
-    var pixi = {
-        __init__: function (params) {
-            var obj = new TileSprite(window.textureCache, entity.name, params.tiles, params.width, params.height);
-            obj.position.x = params.x;
-            obj.position.y = params.y;
-            window.stage.addChild(obj);
-
-            entity.pixiObject = obj;
-        },
-
-        __destroy__: function () {
-            window.stage.removeChild(entity.pixiObject);
-            entity.pixiObject = null;
-        },
-
-        color: function (color) {
-            if (entity.pixiObject) {
-                var color = color instanceof Evaluable ? color.evaluate() : color;
-                entity.pixiObject.tint = color || 0xFFFFFF;
-            }
-        },
-
-        alpha: function (alpha) {
-            if (entity.pixiObject) {
-                var alpha = alpha instanceof Evaluable ? alpha.evaluate() : alpha;
-                entity.pixiObject.alpha = alpha || 1;
-            }
-        }
-    };
-
-    return {
-        pixi: pixi
-    };
-};
-
-PhysicsCommandSet = {};
-
-PhysicsCommandSet.getDirectionDelta = function (dir, entity) {
-    var dx = 0;
-    var dy = 0;
-
-    if (dir === 'flow') {
-        return entity.body.lastDelta;
-    }
-
-    switch(dir) {
-        case 'n':
-            dy = -8;
-            break;
-        case 's':
-            dy = 8;
-            break;
-        case 'w':
-            dx = -8;
-            break;
-        case 'e':
-            dx = 8;
-            break;
-        case 'rnd':
-            var dir = Math.floor(Math.random() * 4);
-            if      (dir === 0) { dy = -8; }
-            else if (dir === 1) { dy = 8;  }
-            else if (dir === 2) { dx = -8; }
-            else                { dx = 8;  }
-            break;
-    }
-
-    return {dx: dx, dy: dy};
-}
-
-PhysicsCommandSet.parseCommands = function (parser, entity) {
-    var body = {
-        blocked: function (dir) {
-            return new DeferredFunction(function () {
-                var blocked = false;
-                var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
-
-                entity.body.bounds.x += delta.dx;
-                entity.body.bounds.y += delta.dy;
-
-                var objs = entity.body.spatial.getIntersect(entity.body.bounds);
-                if (objs.length > 1) {
-                    blocked = true;
-                }
-
-                var tileMapCollide = entity.board.boardEntity.pixiObject.anyTileInRect(entity.body.bounds);
-                if (tileMapCollide) {
-                    blocked = true;
-                }
-
-                entity.body.bounds.x -= delta.dx;
-                entity.body.bounds.y -= delta.dy;
-
-                return blocked;
-            }, entity);
-        },
-
-        dir: function (dir) {
-            return {
-                execute: function (entity) {
-                    var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
-                    var objs = entity.body.spatial.query()
-                        .distance(entity.body.bounds, 1)
-                        .direction(entity.body.bounds, delta.dx / 8, delta.dy / 8)
-                        .get();
-                    return objs;
-                }
-            };
-        },
-
-        move_to: parser._defaultParseFunc(entity.commands.body.move_to),
-        move_by: parser._defaultParseFunc(entity.commands.body.move_by),
-
-        move: function (dirStr) {
-            var dirs = dirStr.split('/');
-            for (var i = 0; i < dirs.length; i++) {
-                if (dirs[i].length === 0)
-                    continue;
-
-                parser.currentBlock.add(entity.commands.body.move.fastBind(entity, dirs[i]));
-                parser.commands.wait(5);
-            }
-        }
-    };
-
-    return {
-        body: body
-    };
-};
-
-PhysicsCommandSet.runCommands = function (entity) {
-    var body = {
-        __init__: function (params) {
-            entity.body = {
-                bounds: params.bounds,
-                spatial: params.spatial,
-                lastDelta: {dx: 0, dy: 0}
-            };
-
-            entity.body.spatial.register(entity);
-        },
-
-        __destroy__: function () {
-            entity.body.spatial.unregister(entity);
-            entity.body = null;
-        },
-
-        move_to: function (x, y) {
-            if (!entity.body)
-                return;
-
-            var x = x instanceof Evaluable ? x.evaluate() : x;
-            var y = y instanceof Evaluable ? y.evaluate() : y;
-
-            entity.body.bounds.x = x;
-            entity.body.bounds.y = y;
-            entity.body.spatial.update(entity);
-
-            if (entity.pixiObject) {
-                entity.pixiObject.position.x = entity.body.bounds.x;
-                entity.pixiObject.position.y = entity.body.bounds.y;
-            }
-        },
-
-        move_by: function (dx, dy) {
-            if (!entity.body)
-                return;
-
-            var dx = dx instanceof Evaluable ? dx.evaluate() : dx;
-            var dy = dy instanceof Evaluable ? dy.evaluate() : dy;
-
-            entity.body.bounds.x += dx;
-            entity.body.bounds.y += dy;
-
-            var objs = entity.body.spatial.getIntersect(entity.body.bounds);
-            if (objs.length > 1) {
-                entity.body.bounds.x -= dx;
-                entity.body.bounds.y -= dy;
-            }
-
-            if (entity.board.boardEntity.pixiObject.anyTileInRect(entity.body.bounds)) {
-                entity.body.bounds.x -= dx;
-                entity.body.bounds.y -= dy;
-            }
-
-            entity.body.spatial.update(entity);
-
-            if (entity.pixiObject) {
-                entity.pixiObject.position.x = entity.body.bounds.x;
-                entity.pixiObject.position.y = entity.body.bounds.y;
-            }
-        },
-
-        move: function (dir) {
-            var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
-            entity.commands.body.move_by(delta.dx, delta.dy);
-            entity.body.lastDelta = delta;
-        }
-    };
-
-    return {
-        body: body
-    };
-};
-
-InputCommandSet = {};
-
-InputCommandSet.parseCommands = function (parser, entity) {
-    var input = {
-        key_down: function (keyCode) {
-            return new DeferredFunction(function () {
-                var _keyCode = keyCode instanceof Evaluable ? keyCode.evaluate() : keyCode;
-                return this.input.downKeys.indexOf(_keyCode) !== -1;
-            }, entity);
-        }
-    };
-
-    return {
-        input: input
-    };
-};
-
-InputCommandSet.runCommands = function (entity) {
-    var input = {
-        __init__: function (params) {
-            entity.input = {
-                downKeys: [],
-                handlers: {}
-            };
-
-            entity.input.handlers.keyDown = function (e) {
-                if (entity.input.downKeys.indexOf(e.keyCode) === -1) {
-                    entity.input.downKeys.push(e.keyCode);
-                }
-                entity.gotoLabel('@input.key_down');
-            };
-
-            entity.input.handlers.keyUp = function (e) {
-                var keyIdx = entity.input.downKeys.indexOf(e.keyCode);
-                if (keyIdx !== -1) {
-                    entity.input.downKeys[keyIdx] = entity.input.downKeys[entity.input.downKeys.length - 1];
-                    entity.input.downKeys.pop();
-                }
-                entity.gotoLabel('@input.key_up');
-            };
-
-            document.addEventListener('keydown', entity.input.handlers.keyDown);
-            document.addEventListener('keyup', entity.input.handlers.keyUp);
-        },
-
-        __destroy__: function () {
-            document.removeEventListener('keydown', entity.input.handlers.keyDown);
-            document.removeEventListener('keyup', entity.input.handlers.keyUp);
-            entity.input = null;
-        },
-    };
-
-    return {
-        input: input
-    };
-};
-
-Entity = function (board, name, script, initVarParams) {
-    //Properties
-    this.id = Util.generateId().toString();
-    this.board = board;
-    this.name = name;
-    this.script = script;
-    this.initVarParams = initVarParams || [];
-    this.depth = 0;
-    this.parent = null;
-
-    //State
-    this.variables = {};
-    this.adoptions = [];
-    this.ended = false;
-    this.cycleEnded = false;
-    this.locked = false;
-
-    //Execution
-    this.labels = {};
-    this.blocks = [];
-    this.commands = {};
-    this.executingLabelBlock = null;
-    this.executingBlock = null;
-    this.executingBlockStack = [];
-}
-
-Entity.clone = function (entity) {
-    return new Entity(entity.board, entity.name, entity.script, entity.initVarParams);
-}
-
-Entity.prototype.begin = function (initVarArgs) {
-    this.cycleEnded = false;
-    this.gotoLabel('_start', initVarArgs);
-}
-
-Entity.prototype.gotoLabel = function (name, varArgs) {
-    if (this.locked || !this.labels[name])
-        return;
-
-    if (!this.labels[name].getActiveBlockRef())
-        return;
-
-    var blockRef = this.labels[name].getActiveBlockRef();
-    this.executingLabelBlock = this.getBlock(blockRef.blockId);
-    this.executingLabelBlock.reset();
-    this.executingLabelBlock.gotoOffset(blockRef.offset);
-    this.executingLabelBlock.injectArguments(varArgs);
-
-    this.executingBlock = this.executingLabelBlock;
-    this.executingBlockStack = [this.executingBlock];
-
-    this.ended = false;
-    this.cycleEnded = false;
-}
-
-Entity.prototype.createBlock = function (varParams) {
-    var block = new Block(varParams);
-    this.blocks[block.id()] = block;
-
-    return block;
-}
-
-Entity.prototype.getBlock = function (id) {
-    return this.blocks[id];
-}
-
-Entity.prototype.runBlock = function (block) {
-    this.ended = false;
-
-    //new block
-    this.executingBlockStack.push(block);
-    this.executingBlock = this.executingBlockStack[this.executingBlockStack.length - 1];
-    this.executingBlock.reset();
-}
-
-Entity.prototype.runPreviousBlock = function () {
-    this.executingBlockStack.pop();
-    this.executingBlock = this.executingBlockStack[this.executingBlockStack.length - 1];
-}
-
-Entity.prototype.execute = function () {
-    this.cycleEnded = false;
-
-    if (this.ended)
-        return;
-
-    //this.executingBlock.execNext();
-
-    while (this.executingBlock.execNext()) {
-        if (this.cycleEnded || this.ended)
-            break;
-    }
-}
-
-Entity.prototype.destroyAdoptions = function () {
-    this.adoptions.forEach(function (commandSet) {
-       commandSet.__destroy__();
-    });
-    this.adoptions = [];
-}
-
-Board = function () {
-    //Setup
-    this.setupFunc = function () {};
-    this.finishFunc = function () {};
-    this.runScript = function () {};
-    this.objects = {};
-    this.autoStep = false;
-    this.parser = null;
-
-    //Execution
-    this.boardEntity = null;
-    this.instances = [{}];
-    this.spawnedObjs = [];
-    this.deletedObjs = [];
-
-    this.terminated = false;
-}
-
-Board.prototype.setup = function (func) {
-    this.setupFunc = func;
-    return this;
-}
-
-Board.prototype.run = function (script) {
-    this.runScript = script;
-    return this;
-}
-
-Board.prototype.finish = function (func) {
-    this.finishFunc = func;
-    return this;
-}
-
-Board.prototype.configure = function (config) {
-    this.autoStep = config.autoStep || false;
-    this.parser = config.parser || new Parser();
-    return this;
-}
-
-Board.prototype.execute = function () {
-    //Run setup
-    (new Function(
-        'var object = this.defineObject.bind(this);' +
-        this.setupFunc.toString().replace("function ()", "")
-    )).call(this);
-
-    //Run root entity script
-    this.boardEntity = new Entity(this, "_board", this.runScript, []);
-    this.boardEntity.depth = 0;
-    this.boardEntity.parent = this.boardEntity;
-    this.parser.parse(this.boardEntity);
-    this.boardEntity.begin();
-    this.instances[0]["_board"] = [];
-    this.instances[0]["_board"].push(this.boardEntity);
-
-    //Begin execution loop
-    if (this.autoStep) {
-        while (!this.terminated) {
-            this.step();
-        }
-    }
-}
-
-Board.prototype.step = function () {
-    if (this.terminated) {
-        return;
-    }
-
-    //Add spawned objects
-    for (var i = 0; i < this.spawnedObjs.length; i++) {
-        if (!this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name])
-            this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name] = [];
-
-        this.instances[this.spawnedObjs[i].depth][this.spawnedObjs[i].name].push(this.spawnedObjs[i]);
-    }
-    this.spawnedObjs = [];
-
-    //Purge dead objects
-    for (var i = 0; i < this.deletedObjs.length; i++) {
-        this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].splice(
-            this.instances[this.deletedObjs[i].depth][this.deletedObjs[i].name].indexOf(this.deletedObjs[i]), 1);
-    }
-    this.deletedObjs = [];
-
-    //Execute object tree
-    for (var i = this.instances.length - 1; i >= 0; i--) {
-        for (var objName in this.instances[i]) {
-            for (var j = 0; j < this.instances[i][objName].length; j++) {
-                this.instances[i][objName][j].execute();
-            }
-        }
-    }
-
-    if (this.terminated) {
-        this.finishFunc();
-    }
-}
-
-Board.prototype.getEntity = function () {
-    return this.boardEntity;
-}
-
-Board.prototype.defineObject = function (name, varParamsOrScript, script) {
-    if (this.objects[name]) {
-        throw "Duplicate object definition";
-    }
-
-    var obj;
-    if (arguments.length === 3) {
-        obj = new Entity(this, name, script, varParamsOrScript);
-    }
-    else if (arguments.length === 2) {
-        obj = new Entity(this, name, varParamsOrScript, []);
-    }
-    else {
-        throw "Bad object definition";
-    }
-
-    this.objects[name] = obj;
-
-    return obj;
-}
-
-Board.prototype.spawnObject = function (name, parent, initVarArgs) {
-    if (!this.objects[name])
-        return;
-
-    if (parent) {
-        if (this.instances.length <= parent.depth + 1)
-            this.instances.push({});
-    }
-
-    var obj = Entity.clone(this.objects[name]);
-    obj.depth = parent ? parent.depth + 1 : 0;
-    obj.parent = parent || obj;
-    this.parser.parse(obj);
-    obj.begin(initVarArgs);
-
-    this.spawnedObjs.push(obj);
-
-    return obj;
-}
-
-Board.prototype.removeObject = function (entity) {
-    this.deletedObjs.push(entity);
-}
-
-Board.prototype.replaceObject = function (target, newName, initVarArgs) {
-    var newObject = this.spawnObject(this.objects[newName].name, target.parent, initVarArgs);
-
-    var children = this.getChildObjects(target);
-    for (var i = 0; i < children.length; i++) {
-        children[i].parent = newObject;
-    }
-
-    this.removeObject(target);
-}
-
-Board.prototype.getChildObjects = function (entity) {
-    if (entity.depth + 1 >= this.instances.length)
-        return [];
-
-    var children = [];
-
-    for (name in this.instances[entity.depth + 1]) {
-        children = children.concat(this.instances[entity.depth + 1][name].filter(function (child) {
-            return child.parent === entity;
-        }));
-    }
-
-    for (var i = 0; i < this.spawnedObjs.length; i++) {
-        if (this.spawnedObjs[i].parent === entity) {
-            children.push(this.spawnedObjs[i]);
-        }
-    }
-
-    return children;
-}
-
-Board.prototype.terminate = function () {
-    this.terminated = true;
-}
-
-
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = {
         Board: Board,
-        Parser: Parser
+        Parser: Parser,
+        Evaluable: Evaluable,
+        DeferredFunction: DeferredFunction,
+        DefaultCommandSet: DefaultCommandSet
     };
 }

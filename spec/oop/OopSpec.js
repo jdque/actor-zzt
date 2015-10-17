@@ -1,12 +1,11 @@
 describe("Oop", function () {
-	var Oop = require("../../src/zzt.js");
+	var ZZT = require("../../src/zzt.js");
 	var board;
 
-	var DefaultParser = new Oop.Parser();
-	DefaultParser.registerModule('default', DefaultCommandSet);
+	var DefaultParser = new ZZT.Parser();
+	DefaultParser.registerModule('default', ZZT.DefaultCommandSet);
 
 	beforeAll(function () {
-		window = global;
 		(function () {
 		    var oldLog = console.log;
 		    console.history = [];
@@ -19,7 +18,7 @@ describe("Oop", function () {
 
 	beforeEach(function () {
 		console.history = [];
-		board = new Oop.Board();
+		board = new ZZT.Board();
 		board.configure({
 			autoStep: true,
 			parser: DefaultParser

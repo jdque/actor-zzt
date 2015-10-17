@@ -3,8 +3,6 @@
 	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 </head>
 <body>
-	<script src="src/zzt.js"></script>
-	<script src="src/test.js"></script>
 	<div style="position:absolute; width:200px; height:480px; background-color: #aaaaaa;">
 		<div id="dom_about" style="text-align:center; line-height:40px; height:40px; margin:16px; background-color: #ffffff">About</div>
 		<div id="dom_pictures" style="text-align:center; line-height:40px; height:40px; margin:16px; background-color: #ffffff">Pictures</div>
@@ -12,5 +10,11 @@
 	<div style="position:absolute; width:640px; height:480px; left:200px; inset:32px; background-color: #eeeeee">
 		<div id="dom_content" style="padding:16px"></div>
 	</div>
+	<script src="lib/system.dev.js"></script>
+	<script>
+		System.import('test/dom_test.js').then(function (app) {
+			app.run();
+		});
+	</script>
 </body>
 </html>
