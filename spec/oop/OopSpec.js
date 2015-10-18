@@ -40,7 +40,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['Hello world'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should ignore trying to spawn a non-existent object", function (done) {
@@ -59,7 +59,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['Hello world'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should fail if there are object definitions with identical names", function (done) {
@@ -80,7 +80,7 @@ describe("Oop", function () {
 				board.finish(function () {
 					done.fail();
 				});
-				board.execute();
+				board.start();
 			}
 			catch (e) {
 				expect(e).toEqual("Duplicate object definition");
@@ -113,7 +113,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['a', 1, 2, true, 1.5].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should execute a label with block-scope arguments, as passed from the caller", function (done) {
@@ -134,7 +134,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([4].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should spawn objects with initialization variables", function (done) {
@@ -162,7 +162,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 	});
 
@@ -201,7 +201,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should loop a block a fixed number of times", function (done) {
@@ -222,7 +222,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([3, 2, 1].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should not run a loop if the count expression is non-numeric", function (done) {
@@ -242,7 +242,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).not.toEqual(['fail'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should allow nested blocks", function (done) {
@@ -271,7 +271,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['a', 'b', 'a', 'b'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 	});
 
@@ -297,7 +297,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should allow jumping to the current label", function (done) {
@@ -323,7 +323,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should handle chained labels", function (done) {
@@ -354,7 +354,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['a', 1, 2].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should handle chained labels with zapping", function (done) {
@@ -383,7 +383,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3, 'done'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should enable/disable labels with 'zap' and 'restore'", function (done) {
@@ -416,7 +416,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should ignore non-existent labels", function (done) {
@@ -451,7 +451,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2, 3].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 	});
 
@@ -480,7 +480,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['B', 'A', 'A'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should ignore messages if an object is locked", function (done) {
@@ -511,7 +511,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['B', 'A', 'B2'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should pass block-scope variables with a message", function (done) {
@@ -540,7 +540,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['a', 2].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 	});
 
@@ -581,7 +581,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['A', 'B'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should morph an entity into a new instance of another", function (done) {
@@ -614,7 +614,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual([1, 2].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 
 		it("should resolve complex scopes to 0..N entities", function (done) {
@@ -684,7 +684,7 @@ describe("Oop", function () {
 				expect(console.history.toString()).toEqual(['A', 'B', 'B', 'AA', 'AA', 'ABA'].toString())
 				done();
 			});
-			board.execute();
+			board.start();
 		});
 	});
 });

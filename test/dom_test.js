@@ -96,7 +96,7 @@ function run() {
         spawn('content')
     });
 
-    board.execute();
+    board.start();
 
     requestAnimationFrame(update);
 }

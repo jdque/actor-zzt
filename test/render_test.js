@@ -211,7 +211,7 @@ function onResourcesLoaded() {
             spawn('Bullet', [val('@x'), val('@y'), val('@dir')])
         end()
     });
-    board.execute();
+    board.start();
 
     requestAnimFrame(update);
 }

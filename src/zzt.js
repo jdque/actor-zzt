@@ -106,7 +106,7 @@ Scope.prototype.parent = function (entity) {
 }
 
 Scope.prototype.board = function (entity) {
-    return entity.board.getEntity();
+    return entity.board;
 }
 
 Scope.prototype.evaluate = function (entity) {
@@ -423,6 +423,8 @@ Entity.prototype.destroyAdoptions = function () {
 }
 
 function Board() {
+    Entity.apply(this, [this, "_board", null, []]);
+
     //Setup
     this.setupFunc = function () {};
     this.finishFunc = function () {};
@@ -432,13 +434,14 @@ function Board() {
     this.parser = null;
 
     //Execution
-    this.boardEntity = null;
     this.instances = [{}];
     this.spawnedObjs = [];
     this.deletedObjs = [];
 
     this.terminated = false;
 }
+
+Board.prototype = Object.create(Entity.prototype);
 
 Board.prototype.setup = function (func) {
     this.setupFunc = func;
@@ -461,7 +464,7 @@ Board.prototype.configure = function (config) {
     return this;
 }
 
-Board.prototype.execute = function () {
+Board.prototype.start = function () {
     //Run setup
     (new Function(
         'var object = this.defineObject.bind(this);' +
@@ -469,13 +472,13 @@ Board.prototype.execute = function () {
     )).call(this);
 
     //Run root entity script
-    this.boardEntity = new Entity(this, "_board", this.runScript, []);
-    this.boardEntity.depth = 0;
-    this.boardEntity.parent = this.boardEntity;
-    this.parser.parse(this.boardEntity);
-    this.boardEntity.begin();
+    this.script = this.runScript;
+    this.depth = 0;
+    this.parent = this;
+    this.parser.parse(this);
+    this.begin();
     this.instances[0]["_board"] = [];
-    this.instances[0]["_board"].push(this.boardEntity);
+    this.instances[0]["_board"].push(this);
 
     //Begin execution loop
     if (this.autoStep) {
@@ -518,10 +521,6 @@ Board.prototype.step = function () {
     if (this.terminated) {
         this.finishFunc();
     }
-}
-
-Board.prototype.getEntity = function () {
-    return this.boardEntity;
 }
 
 Board.prototype.defineObject = function (name, varParamsOrScript, script) {
