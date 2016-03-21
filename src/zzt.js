@@ -604,6 +604,27 @@ Board.prototype.terminate = function () {
     this.terminated = true;
 }
 
+function World() {
+    this.boards = {};
+    this.activeBoard = null;
+}
+
+World.prototype.addBoard = function (name, board) {
+    this.boards[name] = board;
+}
+
+World.prototype.startBoard = function (name) {
+    this.activeBoard = this.boards[name];
+    this.activeBoard.start();
+}
+
+World.prototype.step = function () {
+    if (!this.activeBoard)
+        return;
+
+    this.activeBoard.step();
+}
+
 var DefaultCommandSet = {};
 
 DefaultCommandSet.parseCommands = function (parser, entity) { return {
@@ -852,6 +873,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = {
+        World: World,
         Board: Board,
         Parser: Parser,
         Evaluable: Evaluable,

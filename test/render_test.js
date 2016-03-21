@@ -211,13 +211,16 @@ function onResourcesLoaded() {
             spawn('Bullet', [val('@x'), val('@y'), val('@dir')])
         end()
     });
-    board.start();
+
+    world = new ZZT.World();
+    world.addBoard("Default", board);
+    world.startBoard("Default");
 
     requestAnimFrame(update);
 }
 
 function update() {
-    board.step();
+    world.step();
     renderer.render(stage);
     requestAnimFrame(update);
 }
