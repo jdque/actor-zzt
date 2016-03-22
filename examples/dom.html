@@ -10,9 +10,9 @@
 	<div style="position:absolute; width:640px; height:480px; left:200px; inset:32px; background-color: #eeeeee">
 		<div id="dom_content" style="padding:16px"></div>
 	</div>
-	<script src="lib/system.dev.js"></script>
+	<script src="../lib/system.dev.js"></script>
 	<script>
-		System.import('test/dom_test.js').then(function (app) {
+		System.import('dom.js').then(function (app) {
 			app.run();
 		});
 	</script>
