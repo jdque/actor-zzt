@@ -1,6 +1,6 @@
 var Evaluables = require('./core/evaluables.js');
 var Environment = require('./core/environment.js');
-var DefaultCommandSet = require('./core/default_module.js');
+var DefaultCommandSet = require('./core/default_commands.js');
 var Parser = require('./core/parser.js');
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
