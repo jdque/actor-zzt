@@ -1,4 +1,4 @@
-var Util = require('src/util.js');
+var Util = require('./util.js');
 
 function Evaluable() {
 }

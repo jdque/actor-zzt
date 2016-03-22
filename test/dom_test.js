@@ -1,5 +1,5 @@
-var ZZT = require('src/zzt.js');
-var DOM = require('src/modules/dom.js');
+var ZZT = require('../src/zzt.js');
+var DOM = require('../src/modules/dom.js');
 
 var board;
 

@@ -1,4 +1,4 @@
-var ZZT = require('src/zzt.js');
+var ZZT = require('../zzt.js');
 
 var DOMCommandSet = {};
 

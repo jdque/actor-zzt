@@ -1,5 +1,5 @@
-var PIXI = require('lib/pixi.dev.js');
-var ZZT = require('src/zzt.js');
+var PIXI = require('../../lib/pixi.dev.js');
+var ZZT = require('../zzt.js');
 
 function Tile(attrs) {
     this.fg = attrs.fg || 0x000000;

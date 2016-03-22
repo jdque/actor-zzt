@@ -1,8 +1,8 @@
-var PIXI = require('lib/pixi.dev.js');
-var ZZT = require('src/zzt.js');
-var Graphics = require('src/modules/graphics.js');
-var Physics = require('src/modules/physics.js');
-var Input = require('src/modules/input.js');
+var PIXI = require('../lib/pixi.dev.js');
+var ZZT = require('../src/zzt.js');
+var Graphics = require('../src/modules/graphics.js');
+var Physics = require('../src/modules/physics.js');
+var Input = require('../src/modules/input.js');
 
 var WIDTH = 640;
 var HEIGHT = 480;

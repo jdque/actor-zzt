@@ -1,5 +1,5 @@
-var PIXI = require('lib/pixi.dev.js');
-var ZZT = require('src/zzt.js');
+var PIXI = require('../../lib/pixi.dev.js');
+var ZZT = require('../zzt.js');
 
 function GridHash(cellSize) {
     this.cellSize = cellSize || 64;
