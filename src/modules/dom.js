@@ -5,6 +5,7 @@ var DOMCommandSet = {};
 DOMCommandSet.parseCommands = function (parser, entity) {
     var html = {
         exec: parser._defaultParseFunc(entity.commands.html.exec),
+        transition: parser._defaultParseFunc(entity.commands.html.transition)
     };
 
     return {
@@ -15,13 +16,16 @@ DOMCommandSet.parseCommands = function (parser, entity) {
 DOMCommandSet.runCommands = function (entity) {
     var html = {
         __init__: function (params) {
-            entity.element = document.getElementById(params.id) || null;
+            entity.element = params.element instanceof ZZT.Evaluable ? params.element.evaluate() : params.element;
             if (entity.element) {
                 entity.element.onclick = function () { entity.gotoLabel('@click') }.fastBind(entity);
             }
         },
 
         __destroy__: function () {
+            if (entity.element.parentNode) {
+                entity.element.parentNode.removeChild(entity.element);
+            }
             entity.element.onclick = null;
             entity.element = null;
         },
@@ -30,6 +34,16 @@ DOMCommandSet.runCommands = function (entity) {
             if (entity.element) {
                 func(entity.element);
             }
+        },
+
+        transition: function (attr, val, settings) {
+            function onTransitionEnd() {
+                entity.element.style.transition = "";
+                entity.element.removeEventListener('transitionend', onTransitionEnd);
+            }
+            entity.element.addEventListener('transitionend', onTransitionEnd);
+            entity.element.style.transition = attr + " " + settings;
+            entity.element.style[attr] = val;
         }
     };
 

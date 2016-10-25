@@ -17,7 +17,7 @@ function run() {
 
     board.setup(function () {
         object('about', function () {
-            adopt('html', {id: 'dom_about'})
+            adopt('html', {element: document.getElementById('dom_about')})
             end()
 
             label('@click')
@@ -26,7 +26,7 @@ function run() {
         });
 
         object('pictures', function () {
-            adopt('html', {id: 'dom_pictures'})
+            adopt('html', {element: document.getElementById('dom_pictures')})
             end()
 
             label('@click')
@@ -35,7 +35,7 @@ function run() {
         });
 
         object('content', function () {
-            adopt('html', {id: 'dom_content'})
+            adopt('html', {element: document.getElementById('dom_content')})
             end()
 
             label('showabout')
@@ -45,28 +45,54 @@ function run() {
             end()
 
             label('showpictures')
+                send('[self].[all]', 'die')
                 html.exec(function (elem) {
                     elem.innerHTML = "Here is an image<br /><br />";
-                    //create image element
-                    var image = document.createElement('img');
-                    image.id = "dom_image";
-                    image.src = "assets/penguins.jpg";
-                    image.width = 320;
-                    image.height = 0;
-                    elem.appendChild(image);
                 })
+                spawn('button')
+            end()
+
+            label('create_image')
                 spawn('image')
             end()
 
             label('squawk')
                 html.exec(function (elem) {
-                    elem.innerHTML += "<br /><br />squawk!";
+                    elem.insertAdjacentHTML('beforeend', '<div>squawk!</div>');
                 })
             end()
         });
 
+        object('button', function () {
+            adopt('html', {element: val(function () {
+                var button = document.createElement('button');
+                button.innerText = "Create Image";
+                button.style.display = "block";
+                document.getElementById('dom_content').appendChild(button);
+                return button;
+            })})
+            end()
+
+            label('@click')
+                send('[parent]', 'create_image')
+            end()
+
+            label('die')
+                die()
+            end()
+        })
+
         object('image', function () {
-            adopt('html', {id: 'dom_image'})
+            adopt('html', {element: val(function () {
+                //create image element
+                var image = document.createElement('img');
+                image.src = "assets/penguins.jpg";
+                image.width = 320;
+                image.height = 0;
+                image.style.display = "block";
+                document.getElementById('dom_content').appendChild(image);
+                return image;
+            })})
             jump('animate')
             end()
 
@@ -85,6 +111,9 @@ function run() {
                 html.exec(function (elem) { elem.height = 240; })
                 wait(4)
                 send('[parent]', 'squawk')
+            end()
+
+            label('die')
                 die()
             end()
         });

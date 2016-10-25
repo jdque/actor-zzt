@@ -23,11 +23,16 @@ function Value(varStr, entity) {
 Value.prototype = Object.create(Evaluable.prototype);
 
 Value.prototype.evaluate = function () {
-    if (this.varStr[0] === '@') {
-        return this.entity.executingLabelBlock.variables[this.varStr.substr(1)];
+    if (typeof this.varStr === 'string') {
+        if (this.varStr[0] === '@') {
+            return this.entity.executingLabelBlock.variables[this.varStr.substr(1)];
+        }
+        else if (this.varStr[0] === '$') {
+            return this.entity.variables[this.varStr.substr(1)];
+        }
     }
-    else if (this.varStr[0] === '$') {
-        return this.entity.variables[this.varStr.substr(1)];
+    else if (typeof this.varStr === 'function') {
+        return this.varStr();
     }
 }
 
