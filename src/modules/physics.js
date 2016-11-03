@@ -540,9 +540,6 @@ PhysicsCommandSet.runCommands = function (entity) {
             if (!entity.body)
                 return;
 
-            var x = x instanceof ZZT.Evaluable ? x.evaluate() : x;
-            var y = y instanceof ZZT.Evaluable ? y.evaluate() : y;
-
             entity.body.bounds.x = x;
             entity.body.bounds.y = y;
             entity.body.spatial.update(entity);
@@ -556,9 +553,6 @@ PhysicsCommandSet.runCommands = function (entity) {
         move_by: function (dx, dy) {
             if (!entity.body)
                 return;
-
-            var dx = dx instanceof ZZT.Evaluable ? dx.evaluate() : dx;
-            var dy = dy instanceof ZZT.Evaluable ? dy.evaluate() : dy;
 
             entity.body.bounds.x += dx;
             entity.body.bounds.y += dy;

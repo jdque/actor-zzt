@@ -1,4 +1,5 @@
 var Util = require('./util.js');
+var Evaluables = require('./evaluables.js');
 
 function Parser(entity) {
     this.currentBlock = null;
@@ -32,7 +33,17 @@ Parser.prototype.parsePreviousBlock = function () {
 Parser.prototype._defaultParseFunc = function (runCommand) {
     var self = this;
     return function () {
-        self.currentBlock.add(Function.fastBind.apply(runCommand, [self.entity].concat(Array.prototype.slice.call(arguments))));
+        self.currentBlock.add(Function.fastBind.apply(
+            function () {
+                for (var i = 0; i < arguments.length; i++) {
+                    if (arguments[i] instanceof Evaluables.Evaluable) {
+                        arguments[i] = arguments[i].evaluate();
+                    }
+                }
+                runCommand.apply(this, arguments);
+            },
+            [self.entity].concat(Array.prototype.slice.call(arguments))
+        ));
     };
 }
 

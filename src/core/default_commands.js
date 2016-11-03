@@ -88,10 +88,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         parser.currentBlock.add(entity.commands.adopt.fastBind(entity, entity.commands[moduleName], initParams));
     },
 
-    set: function (varName, value) {
-        parser.currentBlock.add(entity.commands.set.fastBind(entity, varName, value));
-    },
-
+    set:       parser._defaultParseFunc(entity.commands.set),
     terminate: parser._defaultParseFunc(entity.commands.terminate),
     print:     parser._defaultParseFunc(entity.commands.print),
     jump:      parser._defaultParseFunc(entity.commands.jump),
@@ -152,8 +149,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
     },
 
     print: function (text) {
-        var printText = (text instanceof Evaluables.Evaluable) ? text.evaluate() : text;
-        console.log(printText);
+        console.log(text);
         entity.cycleEnded = true;
     },
 
@@ -170,17 +166,24 @@ DefaultCommandSet.runCommands = function (entity) { return {
 
     adopt: function (commandSet, initParams) {
         entity.adoptions.push(commandSet);
+
+        if (typeof initParams === 'object') {
+            Object.keys(initParams).forEach(function (key) {
+                var initVal = initParams[key];
+                initParams[key] = initVal instanceof Evaluables.Evaluable ? initVal.evaluate() : initVal;
+            })
+        }
+
         commandSet.__init__(initParams);
     },
 
     set: function (varName, value) {
         var resolvedName = varName.replace('@', '').replace('$', '');
-        var resolvedValue = (value instanceof Evaluables.Evaluable) ? value.evaluate() : value;
         if (varName.indexOf('@') === 0) {
-            entity.executingBlock.variables[resolvedName] = resolvedValue;
+            entity.executingBlock.variables[resolvedName] = value;
         }
         else if (varName.indexOf('$') === 0) {
-            entity.variables[resolvedName] = resolvedValue;
+            entity.variables[resolvedName] = value;
         }
     },
 

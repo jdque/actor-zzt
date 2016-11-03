@@ -250,14 +250,12 @@ PIXICommandSet.runCommands = function (entity) {
 
         color: function (color) {
             if (entity.pixiObject) {
-                var color = color instanceof ZZT.Evaluable ? color.evaluate() : color;
                 entity.pixiObject.tint = color || 0xFFFFFF;
             }
         },
 
         alpha: function (alpha) {
             if (entity.pixiObject) {
-                var alpha = alpha instanceof ZZT.Evaluable ? alpha.evaluate() : alpha;
                 entity.pixiObject.alpha = alpha || 1;
             }
         }

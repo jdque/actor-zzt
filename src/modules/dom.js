@@ -16,9 +16,11 @@ DOMCommandSet.parseCommands = function (parser, entity) {
 DOMCommandSet.runCommands = function (entity) {
     var html = {
         __init__: function (params) {
-            entity.element = params.element instanceof ZZT.Evaluable ? params.element.evaluate() : params.element;
-            if (entity.element) {
-                entity.element.onclick = function () { entity.gotoLabel('@click') }.fastBind(entity);
+            if (params.element) {
+                entity.element = params.element;
+                entity.element.onclick = function () {
+                    this.gotoLabel('@click')
+                }.fastBind(entity);
             }
         },
 
