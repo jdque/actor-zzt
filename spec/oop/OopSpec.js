@@ -673,6 +673,8 @@ describe("Oop", function () {
 					wait(1)
 					send('<.<.A.AB.ABA', 'ABA_do')	//Chained name scopes
 					wait(1)
+					send('<.<.A.AB.<>', 'AA_do')    //Siblings
+					wait(1)
 					terminate()
 				});
 			});
@@ -681,7 +683,7 @@ describe("Oop", function () {
 				spawn('B')
 			});
 			board.finish(function () {
-				expect(console.history.toString()).toEqual(['A', 'B', 'B', 'AA', 'AA', 'ABA'].toString())
+				expect(console.history.toString()).toEqual(['A', 'B', 'B', 'AA', 'AA', 'ABA', 'AA', 'AA'].toString())
 				done();
 			});
 			board.start();

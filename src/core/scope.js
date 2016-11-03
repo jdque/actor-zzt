@@ -1,10 +1,11 @@
 function Scope(scope) {
-    var self   = "[obj].forEach(function (obj) {\n";
-    var all    = "children(obj).forEach(function (obj) {\n";
-    var name   = "children(obj).filter(function (obj) { return obj.name === '{name}'}).forEach(function (obj) {\n";
-    var parent = "[parent(obj)].forEach(function (obj) {\n";
-    var board  = "[board(obj)].forEach(function (obj) {\n";
-    var out    = "outObjs.push(obj);\n";
+    var self     = "[obj].forEach(function (obj) {\n";
+    var all      = "children(obj).forEach(function (obj) {\n";
+    var name     = "children(obj).filter(function (obj) { return obj.name === '{name}'}).forEach(function (obj) {\n";
+    var parent   = "[parent(obj)].forEach(function (obj) {\n";
+    var siblings = "siblings(obj).forEach(function (obj) {\n";
+    var board    = "[board(obj)].forEach(function (obj) {\n";
+    var out      = "outObjs.push(obj);\n";
 
     var funcParts = [];
     funcParts.push('var outObjs = [];\n');
@@ -27,6 +28,10 @@ function Scope(scope) {
             case '[parent]':
                 funcParts.push(parent);
                 break;
+            case '[siblings]':
+            case '<>':
+                funcParts.push(siblings);
+                break;
             case '$':
             case '[board]':
                 funcParts.push(board);
@@ -46,7 +51,7 @@ function Scope(scope) {
     }
     funcStr += 'return outObjs;';
 
-    this.scopeFunc = new Function('obj, children, parent, board', funcStr);
+    this.scopeFunc = new Function('obj, children, parent, siblings, board', funcStr);
 }
 
 Scope.prototype.children = function (entity) {
@@ -57,12 +62,18 @@ Scope.prototype.parent = function (entity) {
     return entity.parent;
 }
 
+Scope.prototype.siblings = function (entity) {
+    return entity.board.getChildObjects(entity.parent).filter(function (sibling) {
+        return sibling.id !== entity.id;
+    });
+}
+
 Scope.prototype.board = function (entity) {
     return entity.board;
 }
 
 Scope.prototype.evaluate = function (entity) {
-    return this.scopeFunc(entity, this.children, this.parent, this.board) || [];
+    return this.scopeFunc(entity, this.children, this.parent, this.siblings, this.board) || [];
 }
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
