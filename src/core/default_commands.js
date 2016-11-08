@@ -41,25 +41,25 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         parser
             .addOp(Ops.EnterOp.create(ifBlock[0]))
             .enter(ifBlock)
-            .addOp(Ops.IfOp.create(condition, successBlock[0], null))
+            .addOp(Ops.IfOp.create(condition, Ops.EnterOp.create(successBlock[0]), null))
             .addOp(Ops.ExitOp.create(parser.cursor.blockId))
             .enter(successBlock);
     },
 
     _elif: function (condition) {
-        var prevFailBlock = Blocks.Block.create([]);
-        var successBlock = Blocks.Block.create([]);
-
         parser
             .addOp(Ops.ExitOp.create(parser.cursor.blockId))
             .exit();
 
+        var prevFailBlock = Blocks.Block.create([]);
+        var successBlock = Blocks.Block.create([]);
+
         var prevIfOp = parser.cursor.prevOp;
-        prevIfOp[3] = prevFailBlock[0];
+        prevIfOp[3] = Ops.EnterOp.create(prevFailBlock[0]);
 
         parser
             .enter(prevFailBlock)
-            .addOp(Ops.IfOp.create(condition, successBlock[0], null))
+            .addOp(Ops.IfOp.create(condition, Ops.EnterOp.create(successBlock[0]), null))
             .addOp(Ops.ExitOp.create(parser.cursor.blockId))
             .enter(successBlock);
     },
@@ -70,7 +70,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
 
     _endif: function () {
         parser.addOp(Ops.ExitOp.create(parser.cursor.blockId));
-        while (parser.cursor.lastOp[0] === 2) {
+        while (parser.cursor.lastOp[0] === Ops.Type.EXIT_OP) {
             parser.exit();
         }
     },
@@ -79,7 +79,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         var loopBlock = Blocks.Block.create([]);
 
         parser
-            .addOp(Ops.LoopOp.create(count, loopBlock[0]))
+            .addOp(Ops.LoopOp.create(count, Ops.EnterOp.create(loopBlock[0])))
             .enter(loopBlock);
     },
 
@@ -122,7 +122,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
 DefaultCommandSet.runCommands = function (entity) { return {
     end: function () {
         entity.ended = true;
-        entity.executor.reset();
+        entity.executor.clearFrameStack();
     },
 
     terminate: function () {

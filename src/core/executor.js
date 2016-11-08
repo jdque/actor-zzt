@@ -16,13 +16,13 @@ Executor.prototype.setCurrentFrame = function (blockId, offset) {
     if (this.currentFrame && blockId === this.currentFrame.blockId) {
         this.currentFrame.offset = offset;
         this.currentFrame.variables = {};
-        this.currentFrame.loopStates = {};
+        this.currentFrame.loopCount = -1;
     } else {
         this.currentFrame = {
             blockId: blockId,
             offset: offset || 0,
             variables: {},
-            loopStates: {}
+            loopCount: -1
         };
         if (this.frameStack.length === 0) {
             this.currentLabelFrame = this.currentFrame;
@@ -36,7 +36,7 @@ Executor.prototype.exitCurrentFrame = function () {
     this.currentFrame = this.frameStack[this.frameStack.length - 1];
 }
 
-Executor.prototype.reset = function () {
+Executor.prototype.clearFrameStack = function () {
     this.currentLabelFrame = null;
     this.currentFrame = null;
     this.frameStack = [];
@@ -49,6 +49,12 @@ Executor.prototype.step = function () {
     }
 
     var op = opList[this.currentFrame.offset];
+    this.execOp(op);
+
+    return true;
+}
+
+Executor.prototype.execOp = function (op) {
     var opType = op[0];
     switch (opType) {
         case Ops.Type.SIMPLE_OP:
@@ -70,8 +76,6 @@ Executor.prototype.step = function () {
             this.execLoopOp(op);
             break;
     }
-
-    return true;
 }
 
 Executor.prototype.execSimpleOp = function (op) {
@@ -122,7 +126,7 @@ Executor.prototype.execJumpOp = function (op) {
     var blockId = label[2];
     var blockOffset = label[3];
 
-    this.reset();
+    this.clearFrameStack();
     this.setCurrentFrame(blockId, blockOffset);
 
     for (var i = 0; i < args.length; i++) {
@@ -137,15 +141,15 @@ Executor.prototype.execJumpOp = function (op) {
 
 Executor.prototype.execIfOp = function (op) {
     var condition = op[1];
-    var successBlockId = op[2];
-    var failBlockId = op[3];
+    var successOp = op[2];
+    var failOp = op[3];
 
     var condVal = condition instanceof Evaluables.Evaluable ? condition.evaluate(this.entity) : condition;
     if (condVal === true) {
-        this.setCurrentFrame(successBlockId);
+        this.execOp(successOp);
     } else {
-        if (failBlockId != null) {
-            this.setCurrentFrame(failBlockId);
+        if (failOp != null) {
+            this.execOp(failOp);
         } else {
             this.exitCurrentFrame();
             this.currentFrame.offset++;
@@ -155,20 +159,20 @@ Executor.prototype.execIfOp = function (op) {
 
 Executor.prototype.execLoopOp = function (op) {
     var count = op[1];
-    var blockId = op[2];
+    var loopedOp = op[2];
 
-    if (!this.currentFrame.loopStates.hasOwnProperty(blockId)) {
+    if (this.currentFrame.loopCount === -1) {
         var countVal = count instanceof Evaluables.Evaluable ? count.evaluate(this.entity) : count;
-        this.currentFrame.loopStates[blockId] = countVal;
+        this.currentFrame.loopCount = countVal;
     }
 
-    var curCount = this.currentFrame.loopStates[blockId];
+    var curCount = this.currentFrame.loopCount;
     if (curCount > 0) {
-        this.currentFrame.loopStates[blockId] -= 1;
+        this.currentFrame.loopCount -= 1;
         this.currentFrame.offset--;
-        this.setCurrentFrame(blockId);
+        this.execOp(loopedOp);
     } else {
-        delete this.currentFrame.loopStates[blockId];
+        this.currentFrame.loopCount = -1;
         this.currentFrame.offset++;
     }
 }

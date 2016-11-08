@@ -38,25 +38,25 @@ var JumpOp = {
     }
 }
 
-//COND: <type, cond, success_block, fail_block>
+//COND: <type, cond, success_op, fail_op>
 var IfOp = {
-    create: function (condition, successBlockId, failBlockId) {
+    create: function (condition, successOp, failOp) {
         if (typeof condition === 'string') {
             condition = new Evaluables.Expression(condition);
         }
 
-        return [Type.IF_OP, condition, successBlockId, failBlockId];
+        return [Type.IF_OP, condition, successOp, failOp];
     }
 }
 
-//LOOP: <type, count, block>
+//LOOP: <type, count, op>
 var LoopOp = {
-    create: function (count, blockId) {
+    create: function (count, op) {
         if (typeof count === 'string') {
             count = new Evaluables.Expression(count);
         }
 
-        return [Type.LOOP_OP, count, blockId];
+        return [Type.LOOP_OP, count, op];
     }
 }
 
