@@ -2,7 +2,7 @@ var ZZT = require('../zzt.js');
 
 var DOMCommandSet = {};
 
-DOMCommandSet.parseCommands = function (parser, entity) {
+DOMCommandSet.parseCommands = function (parser) {
     var html = {
         exec: parser._defaultParseFunc('html.exec'),
         transition: parser._defaultParseFunc('html.transition')

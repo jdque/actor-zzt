@@ -219,7 +219,7 @@ TextureCache.prototype.drawTiles = function (tiles, x, y, width, height) {
 
 var PIXICommandSet = {};
 
-PIXICommandSet.parseCommands = function (parser, entity) {
+PIXICommandSet.parseCommands = function (parser) {
     var pixi = {
         color: parser._defaultParseFunc('pixi.color'),
         alpha: parser._defaultParseFunc('pixi.alpha')

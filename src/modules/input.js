@@ -2,13 +2,13 @@ var ZZT = require('../zzt.js');
 
 var InputCommandSet = {};
 
-InputCommandSet.parseCommands = function (parser, entity) {
+InputCommandSet.parseCommands = function (parser) {
     var input = {
         key_down: function (keyCode) {
-            return new ZZT.DeferredFunction(function () {
+            return new ZZT.DeferredFunction(function (entity) {
                 var _keyCode = keyCode instanceof ZZT.Evaluable ? keyCode.evaluate() : keyCode;
-                return this.input.downKeys.indexOf(_keyCode) !== -1;
-            }, entity);
+                return entity.input.downKeys.indexOf(_keyCode) !== -1;
+            });
         }
     };
 

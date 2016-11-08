@@ -11,7 +11,7 @@ function DeferredFunction(func) {
 DeferredFunction.prototype = Object.create(Evaluable.prototype);
 
 DeferredFunction.prototype.evaluate = function (entity) {
-    return this.func.call(entity);
+    return this.func(entity);
 }
 
 function Value(varStr) {

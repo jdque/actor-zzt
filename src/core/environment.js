@@ -1,8 +1,9 @@
 var Util = require('./util.js');
 var Evaluables = require('./evaluables.js');
 var Blocks = require('./blocks.js');
+var Ops = require('./ops.js');
 var Scope = require('./scope.js');
-var Parser = require('./parser.js')
+var Parser = require('./parser.js');
 
 function Entity(board, name, script, initVarParams) {
     //Properties
@@ -39,49 +40,12 @@ Entity.prototype.gotoLabel = function (labelName, args) {
         return;
     }
 
-    /*if (!this.labels[name].getActiveBlockRef())
-        return;
-
-    var blockRef = this.labels[name].getActiveBlockRef();
-    this.executingLabelBlock = this.getBlock(blockRef.blockId);
-    this.executingLabelBlock.reset();
-    this.executingLabelBlock.gotoOffset(blockRef.offset);
-    this.executingLabelBlock.injectArguments(varArgs);
-
-    this.executingBlock = this.executingLabelBlock;
-    this.executingBlockStack = [this.executingBlock];*/
-
-    var jumpOp = Blocks.JumpOp.create(labelName, args);
+    var jumpOp = Ops.JumpOp.create(labelName, args);
     this.executor.execJumpOp(jumpOp);
 
     this.ended = false;
     this.cycleEnded = false;
 }
-
-/*Entity.prototype.createBlock = function (varParams) {
-    var block = new Blocks.Block(varParams);
-    this.blocks[block.id()] = block;
-
-    return block;
-}
-
-Entity.prototype.getBlock = function (id) {
-    return this.blocks[id];
-}
-
-Entity.prototype.runBlock = function (block) {
-    this.ended = false;
-
-    //new block
-    this.executingBlockStack.push(block);
-    this.executingBlock = this.executingBlockStack[this.executingBlockStack.length - 1];
-    this.executingBlock.reset();
-}
-
-Entity.prototype.runPreviousBlock = function () {
-    this.executingBlockStack.pop();
-    this.executingBlock = this.executingBlockStack[this.executingBlockStack.length - 1];
-}*/
 
 Entity.prototype.execute = function () {
     this.cycleEnded = false;
@@ -89,8 +53,6 @@ Entity.prototype.execute = function () {
     if (this.ended) {
         return;
     }
-
-    //this.executingBlock.execNext();
 
     while (this.executor.step()) {
         if (this.cycleEnded || this.ended) {

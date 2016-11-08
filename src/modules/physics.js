@@ -459,10 +459,10 @@ PhysicsCommandSet.getDirectionDelta = function (dir, entity) {
     return {dx: dx, dy: dy};
 }
 
-PhysicsCommandSet.parseCommands = function (parser, entity) {
+PhysicsCommandSet.parseCommands = function (parser) {
     var body = {
         blocked: function (dir) {
-            return new ZZT.DeferredFunction(function () {
+            return new ZZT.DeferredFunction(function (entity) {
                 var blocked = false;
                 var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
 
@@ -483,7 +483,7 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
                 entity.body.bounds.y -= delta.dy;
 
                 return blocked;
-            }, entity);
+            });
         },
 
         dir: function (dir) {
@@ -508,8 +508,8 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
                 if (dirs[i].length === 0)
                     continue;
 
-                parser.addOp(ZZT.Blocks.SimpleOp.create('body.move', [dirs[i]]));
-                parser.commands.wait(1);
+                parser.addOp(ZZT.Ops.SimpleOp.create('body.move', [dirs[i]]));
+                parser.commands.wait(5);
             }
         }
     };

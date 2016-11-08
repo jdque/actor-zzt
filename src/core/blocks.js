@@ -1,5 +1,6 @@
 var Util = require('./util.js');
 var Evaluables = require('./evaluables.js');
+var Ops = require('./ops.js');
 
 function LabelStore() {
     this.labels = {};
@@ -114,22 +115,22 @@ Executor.prototype.step = function () {
     var op = opList[this.currentFrame.offset];
     var opType = op[0];
     switch (opType) {
-        case SIMPLE_OP:
+        case Ops.Type.SIMPLE_OP:
             this.execSimpleOp(op);
             break;
-        case ENTER_OP:
+        case Ops.Type.ENTER_OP:
             this.execEnterOp(op);
             break;
-        case EXIT_OP:
+        case Ops.Type.EXIT_OP:
             this.execExitOp(op);
             break;
-        case JUMP_OP:
+        case Ops.Type.JUMP_OP:
             this.execJumpOp(op);
             break;
-        case IF_OP:
+        case Ops.Type.IF_OP:
             this.execIfOp(op);
             break;
-        case LOOP_OP:
+        case Ops.Type.LOOP_OP:
             this.execLoopOp(op);
             break;
     }
@@ -235,13 +236,6 @@ Executor.prototype.execLoopOp = function (op) {
     }
 }
 
-var SIMPLE_OP = 0;
-var ENTER_OP  = 1;
-var EXIT_OP   = 2;
-var JUMP_OP   = 3;
-var IF_OP     = 4;
-var LOOP_OP   = 5;
-
 //BLOCK: <id, param[], op[]>
 var Block = {
     create: function (params) {
@@ -256,68 +250,12 @@ var Label = {
     }
 }
 
-//OP: <type, command, arg[]>
-var SimpleOp = {
-    create: function (commandName, args) {
-        return [SIMPLE_OP, commandName, args || []];
-    }
-}
-
-//ENTER: <type, block>
-var EnterOp = {
-    create: function (blockId) {
-        return [ENTER_OP, blockId];
-    }
-}
-
-//EXIT: <type, block>
-var ExitOp = {
-    create: function (blockId) {
-        return [EXIT_OP, blockId];
-    }
-}
-
-//JUMP: <type, label, arg[]>
-var JumpOp = {
-    create: function (labelName, args) {
-        return [JUMP_OP, labelName, args || []];
-    }
-}
-
-//COND: <type, cond, success_block, fail_block>
-var IfOp = {
-    create: function (condition, successBlockId, failBlockId) {
-        if (typeof condition === 'string') {
-            condition = new Evaluables.Expression(condition);
-        }
-
-        return [IF_OP, condition, successBlockId, failBlockId];
-    }
-}
-
-//LOOP: <type, count, block>
-var LoopOp = {
-    create: function (count, blockId) {
-        if (typeof count === 'string') {
-            count = new Evaluables.Expression(count);
-        }
-
-        return [LOOP_OP, count, blockId];
-    }
-}
-
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = {
         Executor: Executor,
         LabelStore: LabelStore,
         BlockStore: BlockStore,
         Block: Block,
-        Label: Label,
-        SimpleOp: SimpleOp,
-        EnterOp: EnterOp,
-        ExitOp: ExitOp,
-        JumpOp: JumpOp,
-        IfOp: IfOp,
-        LoopOp: LoopOp
+        Label: Label
     }
 }

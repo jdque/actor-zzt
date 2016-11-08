@@ -1,5 +1,6 @@
 var Evaluables = require('./evaluables.js');
 var Blocks = require('./blocks.js');
+var Ops = require('./ops.js');
 var Scope = require('./scope.js');
 
 var DefaultCommandSet = {};
@@ -30,7 +31,7 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
             return;
         }
 
-        parser.addOp(Blocks.SimpleOp.create('end', []));
+        parser.addOp(Ops.SimpleOp.create('end', []));
         parser.exitCurrentBlock();
     },
 
@@ -43,16 +44,16 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         var successBlockId = successBlock[0];
         parser.registerBlock(successBlock);
 
-        var ifOp = Blocks.IfOp.create(condition, successBlockId, null);
-        parser.addOp(Blocks.EnterOp.create(ifBlockId));
+        var ifOp = Ops.IfOp.create(condition, successBlockId, null);
+        parser.addOp(Ops.EnterOp.create(ifBlockId));
         parser.setCurrentBlock(ifBlockId);
         parser.addOp(ifOp);
-        parser.addOp(Blocks.ExitOp.create(parser.getBlockId()));
+        parser.addOp(Ops.ExitOp.create(parser.getBlockId()));
         parser.setCurrentBlock(successBlockId);
     },
 
     _elif: function (condition) {
-        var exitOp = Blocks.ExitOp.create(parser.getBlockId());
+        var exitOp = Ops.ExitOp.create(parser.getBlockId());
         parser.addOp(exitOp);
         parser.exitCurrentBlock();
 
@@ -66,16 +67,16 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         var successBlockId = successBlock[0];
         parser.registerBlock(successBlock);
 
-        var ifOp = Blocks.IfOp.create(condition, successBlockId, null);
+        var ifOp = Ops.IfOp.create(condition, successBlockId, null);
         parser.setCurrentBlock(prevFailBlockId);
         parser.addOp(ifOp);
-        parser.addOp(Blocks.ExitOp.create(parser.getBlockId()));
+        parser.addOp(Ops.ExitOp.create(parser.getBlockId()));
 
         parser.setCurrentBlock(successBlockId);
     },
 
     _else: function () {
-        var exitOp = Blocks.ExitOp.create(parser.getBlockId());
+        var exitOp = Ops.ExitOp.create(parser.getBlockId());
         parser.addOp(exitOp);
         parser.exitCurrentBlock();
 
@@ -89,16 +90,16 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         var successBlockId = successBlock[0];
         parser.registerBlock(successBlock);
 
-        var ifOp = Blocks.IfOp.create("true", successBlockId, null);
+        var ifOp = Ops.IfOp.create("true", successBlockId, null);
         parser.setCurrentBlock(prevFailBlockId);
         parser.addOp(ifOp);
-        parser.addOp(Blocks.ExitOp.create(parser.getBlockId()));
+        parser.addOp(Ops.ExitOp.create(parser.getBlockId()));
 
         parser.setCurrentBlock(successBlockId);
     },
 
     _endif: function () {
-        var exitOp = Blocks.ExitOp.create(parser.getBlockId());
+        var exitOp = Ops.ExitOp.create(parser.getBlockId());
         parser.addOp(exitOp);
         while(parser.getLastBlockOp()[0] === 2) {
             parser.exitCurrentBlock();
@@ -110,30 +111,30 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
         var loopBlockId = loopBlock[0];
         parser.registerBlock(loopBlock);
 
-        var loopOp = Blocks.LoopOp.create(count, loopBlockId);
+        var loopOp = Ops.LoopOp.create(count, loopBlockId);
         parser.addOp(loopOp);
         parser.setCurrentBlock(loopBlockId);
     },
 
     endloop: function () {
-        var exitOp = Blocks.ExitOp.create(parser.getBlockId());
+        var exitOp = Ops.ExitOp.create(parser.getBlockId());
         parser.addOp(exitOp);
         parser.exitCurrentBlock();
     },
 
     wait: function (count) {
         parser.commands.loop(count);
-        parser.addOp(Blocks.SimpleOp.create('wait', []));
+        parser.addOp(Ops.SimpleOp.create('wait', []));
         parser.commands.endloop();
     },
 
     send: function (scopeStr, label, args) {
         var scope = typeof scopeStr === 'string' ? new Scope(scopeStr) : scopeStr;
-        parser.addOp(Blocks.SimpleOp.create('send', [scope, label, args]));
+        parser.addOp(Ops.SimpleOp.create('send', [scope, label, args]));
     },
 
     jump: function (labelName, args) {
-        var jumpOp = Blocks.JumpOp.create(labelName, args);
+        var jumpOp = Ops.JumpOp.create(labelName, args);
         parser.addOp(jumpOp);
     },
 

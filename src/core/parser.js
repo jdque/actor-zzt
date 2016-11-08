@@ -1,6 +1,7 @@
 var Util = require('./util.js');
 var Evaluables = require('./evaluables.js');
 var Blocks = require('./blocks.js');
+var Ops = require('./ops.js');
 
 function Parser() {
     this.labelStore = null;
@@ -93,7 +94,7 @@ Parser.prototype._defaultParseFunc = function (commandName) {
     var self = this;
 
     return function () {
-        self.addOp(Blocks.SimpleOp.create(commandName, arguments));
+        self.addOp(Ops.SimpleOp.create(commandName, arguments));
     };
 }
 
@@ -114,17 +115,15 @@ Parser.prototype.parse = function (entity) {
     this.labelStore = new Blocks.LabelStore();
     this.blockStore = new Blocks.BlockStore();
 
-    var commandStr = "";
-    for (var name in parseCommands) {
-        commandStr += 'var ' + name + ' = this.commands.' + name + ';';
-    }
     var varParamsStr = '["' + entity.initVarParams.join('","') + '"]';
-    (new Function(
-        commandStr +
+    var commandKeys = Object.keys(this.commands);
+    var commandVals = commandKeys.map(function (key) { return this.commands[key]; }, this);
+
+    (new Function(commandKeys.join(','),
         'label("_start", ' + varParamsStr + ');' +
-        entity.script.toString().replace("function ()", "") + ";" +
+        entity.script.toString().match(/{([\s\S]*)}/)[1] + ";" +
         'end();'
-    )).call(this);
+    )).apply(this, commandVals);
 
     return new Blocks.Executor(runCommands, this.labelStore, this.blockStore, entity);
 }
