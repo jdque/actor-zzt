@@ -5,10 +5,11 @@ var Ops = require('./ops.js');
 var Executor = require('./executor.js');
 
 function Parser() {
-    this.labelStore = null;
-    this.blockStore = null;
     this.commands = {};
     this.modules = [];
+
+    this.labelStore = new Blocks.LabelStore();
+    this.blockStore = new Blocks.BlockStore();
 
     this.currentBlock = null;
     this.blockStack = [];
@@ -21,9 +22,8 @@ function Parser() {
 }
 
 Parser.prototype.reset = function () {
-    this.labelStore = null;
-    this.blockStore = null;
-    this.commands = {};
+    this.labelStore = new Blocks.LabelStore();
+    this.blockStore = new Blocks.BlockStore();
 
     this.currentBlock = null;
     this.blockStack = [];
@@ -42,6 +42,8 @@ Parser.prototype.registerModule = function (name, commandSet) {
         name: name,
         commandSet: commandSet
     });
+
+    Util.extend(this.commands, commandSet.parseCommands.call(null, this));
 }
 
 Parser.prototype.registerBlock = function (block) {
@@ -124,17 +126,10 @@ Parser.prototype._defaultParseFunc = function (commandName) {
 Parser.prototype.parse = function (entity) {
     this.reset();
 
-    var parseCommands = {};
     var runCommands = {};
     this.modules.forEach(function (module) {
-        var commandSet = module.commandSet;
-        Util.extend(parseCommands, commandSet.parseCommands.call(null, this));
-        Util.extend(runCommands, commandSet.runCommands.call(null, entity));
+        Util.extend(runCommands, module.commandSet.runCommands.call(null, entity));
     }, this);
-
-    this.commands = parseCommands;
-    this.labelStore = new Blocks.LabelStore();
-    this.blockStore = new Blocks.BlockStore();
 
     var varParamsStr = '["' + entity.initVarParams.join('","') + '"]';
     var commandKeys = Object.keys(this.commands);
