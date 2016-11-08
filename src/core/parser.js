@@ -12,6 +12,12 @@ function Parser() {
 
     this.currentBlock = null;
     this.blockStack = [];
+    this.cursor = {
+        blockId: null,
+        offset: null,
+        prevOp: null,
+        lastOp: null
+    };
 }
 
 Parser.prototype.reset = function () {
@@ -21,6 +27,8 @@ Parser.prototype.reset = function () {
 
     this.currentBlock = null;
     this.blockStack = [];
+
+    this.resetCursor();
 }
 
 Parser.prototype.registerModule = function (name, commandSet) {
@@ -44,28 +52,23 @@ Parser.prototype.registerLabel = function (label) {
     this.labelStore.add(label);
 }
 
-Parser.prototype.getRegisteredBlock = function (blockId) {
-    return this.blockStore.get(blockId);
+Parser.prototype.resetCursor = function () {
+    this.cursor.blockId = null;
+    this.cursor.offset = null;
+    this.cursor.prevOp = null;
+    this.cursor.lastOp = null;
 }
 
-Parser.prototype.addOp = function (op) {
-    this.currentBlock[2].push(op);
-}
+Parser.prototype.updateCursor = function (block) {
+    if (!block) {
+        this.resetCursor();
+        return;
+    }
 
-Parser.prototype.getBlockId = function () {
-    return this.currentBlock[0];
-}
-
-Parser.prototype.getBlockOffset = function () {
-    return this.currentBlock[2].length;
-}
-
-Parser.prototype.getFirstBlockOp = function () {
-    return this.currentBlock[2][0];
-}
-
-Parser.prototype.getLastBlockOp = function () {
-    return this.currentBlock[2][this.currentBlock[2].length - 1];
+    this.cursor.blockId = block[0];
+    this.cursor.offset = block[2].length;
+    this.cursor.prevOp = block[2][block[2].length - 2] || null;
+    this.cursor.lastOp = block[2][block[2].length - 1] || null;
 }
 
 Parser.prototype.hasActiveBlock = function () {
@@ -84,11 +87,30 @@ Parser.prototype.setCurrentBlock = function (blockId) {
 
     this.currentBlock = block;
     this.blockStack.push(this.currentBlock);
+    this.updateCursor(this.currentBlock);
 }
 
 Parser.prototype.exitCurrentBlock = function () {
     this.blockStack.pop();
     this.currentBlock = this.blockStack[this.blockStack.length - 1];
+    this.updateCursor(this.currentBlock);
+}
+
+Parser.prototype.enter = function (block) {
+    this.registerBlock(block);
+    this.setCurrentBlock(block[0]);
+    return this;
+}
+
+Parser.prototype.exit = function () {
+    this.exitCurrentBlock();
+    return this;
+}
+
+Parser.prototype.addOp = function (op) {
+    this.currentBlock[2].push(op);
+    this.updateCursor(this.currentBlock);
+    return this;
 }
 
 Parser.prototype._defaultParseFunc = function (commandName) {
@@ -109,8 +131,6 @@ Parser.prototype.parse = function (entity) {
         Util.extend(parseCommands, commandSet.parseCommands.call(null, this));
         Util.extend(runCommands, commandSet.runCommands.call(null, entity));
     }, this);
-
-    entity.commands = runCommands;
 
     this.commands = parseCommands;
     this.labelStore = new Blocks.LabelStore();

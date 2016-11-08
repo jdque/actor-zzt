@@ -17,12 +17,10 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
     label: function (name, params) {
         if (!parser.hasActiveBlock()) {
             var block = Blocks.Block.create([]);
-            var blockId = block[0];
-            parser.registerBlock(block);
-            parser.setCurrentBlock(blockId);
+            parser.enter(block);
         }
 
-        var label = Blocks.Label.create(name, params, parser.getBlockId(), parser.getBlockOffset());
+        var label = Blocks.Label.create(name, params, parser.cursor.blockId, parser.cursor.offset);
         parser.registerLabel(label);
     },
 
@@ -31,95 +29,64 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
             return;
         }
 
-        parser.addOp(Ops.SimpleOp.create('end', []));
-        parser.exitCurrentBlock();
+        parser
+            .addOp(Ops.SimpleOp.create('end', []))
+            .exit();
     },
 
     _if: function (condition) {
         var ifBlock = Blocks.Block.create([]);
-        var ifBlockId = ifBlock[0];
-        parser.registerBlock(ifBlock);
-
         var successBlock = Blocks.Block.create([]);
-        var successBlockId = successBlock[0];
-        parser.registerBlock(successBlock);
 
-        var ifOp = Ops.IfOp.create(condition, successBlockId, null);
-        parser.addOp(Ops.EnterOp.create(ifBlockId));
-        parser.setCurrentBlock(ifBlockId);
-        parser.addOp(ifOp);
-        parser.addOp(Ops.ExitOp.create(parser.getBlockId()));
-        parser.setCurrentBlock(successBlockId);
+        parser
+            .addOp(Ops.EnterOp.create(ifBlock[0]))
+            .enter(ifBlock)
+            .addOp(Ops.IfOp.create(condition, successBlock[0], null))
+            .addOp(Ops.ExitOp.create(parser.cursor.blockId))
+            .enter(successBlock);
     },
 
     _elif: function (condition) {
-        var exitOp = Ops.ExitOp.create(parser.getBlockId());
-        parser.addOp(exitOp);
-        parser.exitCurrentBlock();
-
-        var prevIfOp = parser.getFirstBlockOp();
         var prevFailBlock = Blocks.Block.create([]);
-        var prevFailBlockId = prevFailBlock[0];
-        parser.registerBlock(prevFailBlock);
-        prevIfOp[3] = prevFailBlockId;
-
         var successBlock = Blocks.Block.create([]);
-        var successBlockId = successBlock[0];
-        parser.registerBlock(successBlock);
 
-        var ifOp = Ops.IfOp.create(condition, successBlockId, null);
-        parser.setCurrentBlock(prevFailBlockId);
-        parser.addOp(ifOp);
-        parser.addOp(Ops.ExitOp.create(parser.getBlockId()));
+        parser
+            .addOp(Ops.ExitOp.create(parser.cursor.blockId))
+            .exit();
 
-        parser.setCurrentBlock(successBlockId);
+        var prevIfOp = parser.cursor.prevOp;
+        prevIfOp[3] = prevFailBlock[0];
+
+        parser
+            .enter(prevFailBlock)
+            .addOp(Ops.IfOp.create(condition, successBlock[0], null))
+            .addOp(Ops.ExitOp.create(parser.cursor.blockId))
+            .enter(successBlock);
     },
 
     _else: function () {
-        var exitOp = Ops.ExitOp.create(parser.getBlockId());
-        parser.addOp(exitOp);
-        parser.exitCurrentBlock();
-
-        var prevIfOp = parser.getFirstBlockOp();
-        var prevFailBlock = Blocks.Block.create([]);
-        var prevFailBlockId = prevFailBlock[0];
-        parser.registerBlock(prevFailBlock);
-        prevIfOp[3] = prevFailBlockId;
-
-        var successBlock = Blocks.Block.create([]);
-        var successBlockId = successBlock[0];
-        parser.registerBlock(successBlock);
-
-        var ifOp = Ops.IfOp.create("true", successBlockId, null);
-        parser.setCurrentBlock(prevFailBlockId);
-        parser.addOp(ifOp);
-        parser.addOp(Ops.ExitOp.create(parser.getBlockId()));
-
-        parser.setCurrentBlock(successBlockId);
+        parser.commands._elif(true);
     },
 
     _endif: function () {
-        var exitOp = Ops.ExitOp.create(parser.getBlockId());
-        parser.addOp(exitOp);
-        while(parser.getLastBlockOp()[0] === 2) {
-            parser.exitCurrentBlock();
+        parser.addOp(Ops.ExitOp.create(parser.cursor.blockId));
+        while (parser.cursor.lastOp[0] === 2) {
+            parser.exit();
         }
     },
 
     loop: function (count) {
         var loopBlock = Blocks.Block.create([]);
-        var loopBlockId = loopBlock[0];
-        parser.registerBlock(loopBlock);
 
-        var loopOp = Ops.LoopOp.create(count, loopBlockId);
-        parser.addOp(loopOp);
-        parser.setCurrentBlock(loopBlockId);
+        parser
+            .addOp(Ops.LoopOp.create(count, loopBlock[0]))
+            .enter(loopBlock);
     },
 
     endloop: function () {
-        var exitOp = Ops.ExitOp.create(parser.getBlockId());
-        parser.addOp(exitOp);
-        parser.exitCurrentBlock();
+        parser
+            .addOp(Ops.ExitOp.create(parser.cursor.blockId))
+            .exit();
     },
 
     wait: function (count) {

@@ -140,7 +140,8 @@ Executor.prototype.execIfOp = function (op) {
     var successBlockId = op[2];
     var failBlockId = op[3];
 
-    if (condition.evaluate(this.entity) === true) {
+    var condVal = condition instanceof Evaluables.Evaluable ? condition.evaluate(this.entity) : condition;
+    if (condVal === true) {
         this.setCurrentFrame(successBlockId);
     } else {
         if (failBlockId != null) {
@@ -157,8 +158,8 @@ Executor.prototype.execLoopOp = function (op) {
     var blockId = op[2];
 
     if (!this.currentFrame.loopStates.hasOwnProperty(blockId)) {
-        var count = count instanceof Evaluables.Evaluable ? count.evaluate(this.entity) : count;
-        this.currentFrame.loopStates[blockId] = count;
+        var countVal = count instanceof Evaluables.Evaluable ? count.evaluate(this.entity) : count;
+        this.currentFrame.loopStates[blockId] = countVal;
     }
 
     var curCount = this.currentFrame.loopStates[blockId];
