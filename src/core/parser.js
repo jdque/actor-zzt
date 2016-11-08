@@ -2,6 +2,7 @@ var Util = require('./util.js');
 var Evaluables = require('./evaluables.js');
 var Blocks = require('./blocks.js');
 var Ops = require('./ops.js');
+var Executor = require('./executor.js');
 
 function Parser() {
     this.labelStore = null;
@@ -125,7 +126,7 @@ Parser.prototype.parse = function (entity) {
         'end();'
     )).apply(this, commandVals);
 
-    return new Blocks.Executor(runCommands, this.labelStore, this.blockStore, entity);
+    return new Executor(runCommands, this.labelStore, this.blockStore, entity);
 }
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
