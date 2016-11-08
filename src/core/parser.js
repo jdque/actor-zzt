@@ -1,10 +1,24 @@
 var Util = require('./util.js');
 var Evaluables = require('./evaluables.js');
+var Blocks = require('./blocks.js');
 
-function Parser(entity) {
+function Parser() {
+    this.labelStore = null;
+    this.blockStore = null;
+    this.commands = {};
+    this.modules = [];
+
     this.currentBlock = null;
     this.blockStack = [];
-    this.modules = [];
+}
+
+Parser.prototype.reset = function () {
+    this.labelStore = null;
+    this.blockStore = null;
+    this.commands = {};
+
+    this.currentBlock = null;
+    this.blockStack = [];
 }
 
 Parser.prototype.registerModule = function (name, commandSet) {
@@ -20,60 +34,99 @@ Parser.prototype.registerModule = function (name, commandSet) {
     });
 }
 
-Parser.prototype.parseNewBlock = function (block) {
+Parser.prototype.registerBlock = function (block) {
+    this.blockStore.add(block);
+}
+
+Parser.prototype.registerLabel = function (label) {
+    this.labelStore.add(label);
+}
+
+Parser.prototype.getRegisteredBlock = function (blockId) {
+    return this.blockStore.get(blockId);
+}
+
+Parser.prototype.addOp = function (op) {
+    this.currentBlock[2].push(op);
+}
+
+Parser.prototype.getBlockId = function () {
+    return this.currentBlock[0];
+}
+
+Parser.prototype.getBlockOffset = function () {
+    return this.currentBlock[2].length;
+}
+
+Parser.prototype.getFirstBlockOp = function () {
+    return this.currentBlock[2][0];
+}
+
+Parser.prototype.getLastBlockOp = function () {
+    return this.currentBlock[2][this.currentBlock[2].length - 1];
+}
+
+Parser.prototype.hasActiveBlock = function () {
+    return this.currentBlock != null;
+}
+
+Parser.prototype.setCurrentBlock = function (blockId) {
+    var block = this.blockStore.get(blockId);
+    if (!block) {
+        throw new Error("Unregistered block");
+    }
+
+    if (this.currentBlock && block[0] === this.currentBlock[0]) {
+        return;
+    }
+
     this.currentBlock = block;
     this.blockStack.push(this.currentBlock);
 }
 
-Parser.prototype.parsePreviousBlock = function () {
+Parser.prototype.exitCurrentBlock = function () {
     this.blockStack.pop();
     this.currentBlock = this.blockStack[this.blockStack.length - 1];
 }
 
-Parser.prototype._defaultParseFunc = function (runCommand) {
+Parser.prototype._defaultParseFunc = function (commandName) {
     var self = this;
+
     return function () {
-        self.currentBlock.add(Function.fastBind.apply(
-            function () {
-                for (var i = 0; i < arguments.length; i++) {
-                    if (arguments[i] instanceof Evaluables.Evaluable) {
-                        arguments[i] = arguments[i].evaluate();
-                    }
-                }
-                runCommand.apply(this, arguments);
-            },
-            [self.entity].concat(Array.prototype.slice.call(arguments))
-        ));
+        self.addOp(Blocks.SimpleOp.create(commandName, arguments));
     };
 }
 
 Parser.prototype.parse = function (entity) {
-    this.entity = entity;
-    this.entity.commands = {};
-    this.commands = {};
+    this.reset();
 
+    var parseCommands = {};
+    var runCommands = {};
     this.modules.forEach(function (module) {
         var commandSet = module.commandSet;
-        Util.extend(this.entity.commands, commandSet.runCommands.call(null, this.entity));
-        Util.extend(this.commands, commandSet.parseCommands.call(null, this, this.entity));
+        Util.extend(parseCommands, commandSet.parseCommands.call(null, this));
+        Util.extend(runCommands, commandSet.runCommands.call(null, entity));
     }, this);
 
+    entity.commands = runCommands;
+
+    this.commands = parseCommands;
+    this.labelStore = new Blocks.LabelStore();
+    this.blockStore = new Blocks.BlockStore();
+
     var commandStr = "";
-    for (var name in this.commands) {
+    for (var name in parseCommands) {
         commandStr += 'var ' + name + ' = this.commands.' + name + ';';
     }
-
-    var varParams = '["' + this.entity.initVarParams.join('","') + '"]';
-
+    var varParamsStr = '["' + entity.initVarParams.join('","') + '"]';
     (new Function(
         commandStr +
-        'label("_start", ' + varParams + ');' +
-        this.entity.script.toString().replace("function ()", "") + ";" +
+        'label("_start", ' + varParamsStr + ');' +
+        entity.script.toString().replace("function ()", "") + ";" +
         'end();'
     )).call(this);
 
-    this.entity = null;
-    this.commands = {};
+    return new Blocks.Executor(runCommands, this.labelStore, this.blockStore, entity);
 }
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

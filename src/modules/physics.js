@@ -499,8 +499,8 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
             };
         },
 
-        move_to: parser._defaultParseFunc(entity.commands.body.move_to),
-        move_by: parser._defaultParseFunc(entity.commands.body.move_by),
+        move_to: parser._defaultParseFunc('body.move_to'),
+        move_by: parser._defaultParseFunc('body.move_by'),
 
         move: function (dirStr) {
             var dirs = dirStr.split('/');
@@ -508,8 +508,8 @@ PhysicsCommandSet.parseCommands = function (parser, entity) {
                 if (dirs[i].length === 0)
                     continue;
 
-                parser.currentBlock.add(entity.commands.body.move.fastBind(entity, dirs[i]));
-                parser.commands.wait(5);
+                parser.addOp(ZZT.Blocks.SimpleOp.create('body.move', [dirs[i]]));
+                parser.commands.wait(1);
             }
         }
     };
@@ -578,7 +578,7 @@ PhysicsCommandSet.runCommands = function (entity) {
 
         move: function (dir) {
             var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
-            entity.commands.body.move_by(delta.dx, delta.dy);
+            entity.executor.commands.body.move_by(delta.dx, delta.dy);
             entity.body.lastDelta = delta;
         }
     };

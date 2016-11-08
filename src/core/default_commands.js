@@ -6,108 +6,155 @@ var DefaultCommandSet = {};
 
 DefaultCommandSet.parseCommands = function (parser, entity) { return {
     val: function (varStr) {
-        return new Evaluables.Value(varStr, entity);
+        return new Evaluables.Value(varStr);
     },
 
     expr: function (expr) {
-        return new Evaluables.Expression(expr, entity);
+        return new Evaluables.Expression(expr);
     },
 
-    label: function (name, varParams) {
-        if (parser.blockStack.length === 0) {
-            var block = entity.createBlock(varParams);
-            parser.parseNewBlock(block);
+    label: function (name, params) {
+        if (!parser.hasActiveBlock()) {
+            var block = Blocks.Block.create([]);
+            var blockId = block[0];
+            parser.registerBlock(block);
+            parser.setCurrentBlock(blockId);
         }
 
-        if (!entity.labels[name]) {
-            entity.labels[name] = new Blocks.LabelBlockGroup();
-        }
-        entity.labels[name].addBlockRef(parser.currentBlock.id(), parser.currentBlock.commands.length);
+        var label = Blocks.Label.create(name, params, parser.getBlockId(), parser.getBlockOffset());
+        parser.registerLabel(label);
     },
 
     end: function () {
-        if (!parser.currentBlock)
+        if (!parser.hasActiveBlock()) {
             return;
+        }
 
-        parser.currentBlock.add(entity.commands.end.fastBind(entity));
-        parser.parsePreviousBlock();
+        parser.addOp(Blocks.SimpleOp.create('end', []));
+        parser.exitCurrentBlock();
     },
 
     _if: function (condition) {
-        var condition = typeof condition === 'string' ? new Evaluables.Expression(condition, entity) : condition;
-        var block = new Blocks.IfBlock();
+        var ifBlock = Blocks.Block.create([]);
+        var ifBlockId = ifBlock[0];
+        parser.registerBlock(ifBlock);
 
-        parser.currentBlock.add(entity.runBlock.fastBind(entity, block));
-        parser.parseNewBlock(block);
-        parser.currentBlock.addBranch(entity.commands.if.fastBind(entity, condition));
+        var successBlock = Blocks.Block.create([]);
+        var successBlockId = successBlock[0];
+        parser.registerBlock(successBlock);
+
+        var ifOp = Blocks.IfOp.create(condition, successBlockId, null);
+        parser.addOp(Blocks.EnterOp.create(ifBlockId));
+        parser.setCurrentBlock(ifBlockId);
+        parser.addOp(ifOp);
+        parser.addOp(Blocks.ExitOp.create(parser.getBlockId()));
+        parser.setCurrentBlock(successBlockId);
     },
 
     _elif: function (condition) {
-        var condition = typeof condition === 'string' ? new Evaluables.Expression(condition, entity) : condition;
+        var exitOp = Blocks.ExitOp.create(parser.getBlockId());
+        parser.addOp(exitOp);
+        parser.exitCurrentBlock();
 
-        parser.currentBlock.add(entity.runPreviousBlock.fastBind(entity));
-        parser.currentBlock.addBranch(entity.commands.elif.fastBind(entity, condition));
+        var prevIfOp = parser.getFirstBlockOp();
+        var prevFailBlock = Blocks.Block.create([]);
+        var prevFailBlockId = prevFailBlock[0];
+        parser.registerBlock(prevFailBlock);
+        prevIfOp[3] = prevFailBlockId;
+
+        var successBlock = Blocks.Block.create([]);
+        var successBlockId = successBlock[0];
+        parser.registerBlock(successBlock);
+
+        var ifOp = Blocks.IfOp.create(condition, successBlockId, null);
+        parser.setCurrentBlock(prevFailBlockId);
+        parser.addOp(ifOp);
+        parser.addOp(Blocks.ExitOp.create(parser.getBlockId()));
+
+        parser.setCurrentBlock(successBlockId);
     },
 
     _else: function () {
-        parser.currentBlock.add(entity.runPreviousBlock.fastBind(entity));
-        parser.currentBlock.addBranch(entity.commands.else.fastBind(entity));
+        var exitOp = Blocks.ExitOp.create(parser.getBlockId());
+        parser.addOp(exitOp);
+        parser.exitCurrentBlock();
+
+        var prevIfOp = parser.getFirstBlockOp();
+        var prevFailBlock = Blocks.Block.create([]);
+        var prevFailBlockId = prevFailBlock[0];
+        parser.registerBlock(prevFailBlock);
+        prevIfOp[3] = prevFailBlockId;
+
+        var successBlock = Blocks.Block.create([]);
+        var successBlockId = successBlock[0];
+        parser.registerBlock(successBlock);
+
+        var ifOp = Blocks.IfOp.create("true", successBlockId, null);
+        parser.setCurrentBlock(prevFailBlockId);
+        parser.addOp(ifOp);
+        parser.addOp(Blocks.ExitOp.create(parser.getBlockId()));
+
+        parser.setCurrentBlock(successBlockId);
     },
 
     _endif: function () {
-        parser.currentBlock.add(entity.runPreviousBlock.fastBind(entity));
-        parser.parsePreviousBlock();
+        var exitOp = Blocks.ExitOp.create(parser.getBlockId());
+        parser.addOp(exitOp);
+        while(parser.getLastBlockOp()[0] === 2) {
+            parser.exitCurrentBlock();
+        }
     },
 
     loop: function (count) {
-        count = typeof count === 'string' ? new Evaluables.Expression(count, entity) : count;
-        var block = new Blocks.LoopBlock(count);
+        var loopBlock = Blocks.Block.create([]);
+        var loopBlockId = loopBlock[0];
+        parser.registerBlock(loopBlock);
 
-        parser.currentBlock.add(entity.runBlock.fastBind(entity, block));
-        parser.parseNewBlock(block);
-        parser.currentBlock.add(entity.commands.loop.fastBind(entity));
+        var loopOp = Blocks.LoopOp.create(count, loopBlockId);
+        parser.addOp(loopOp);
+        parser.setCurrentBlock(loopBlockId);
     },
 
     endloop: function () {
-        parser.currentBlock.add(entity.commands.endloop.fastBind(entity));
-        parser.parsePreviousBlock();
+        var exitOp = Blocks.ExitOp.create(parser.getBlockId());
+        parser.addOp(exitOp);
+        parser.exitCurrentBlock();
     },
 
     wait: function (count) {
         parser.commands.loop(count);
-        parser.currentBlock.add(entity.commands.wait.fastBind(entity));
+        parser.addOp(Blocks.SimpleOp.create('wait', []));
         parser.commands.endloop();
     },
 
-    send: function (scopeStr, label, varArgs) {
+    send: function (scopeStr, label, args) {
         var scope = typeof scopeStr === 'string' ? new Scope(scopeStr) : scopeStr;
-        parser.currentBlock.add(entity.commands.send.fastBind(entity, scope, label, varArgs));
+        parser.addOp(Blocks.SimpleOp.create('send', [scope, label, args]));
     },
 
-    adopt: function (moduleName, initParams) {
-        parser.currentBlock.add(entity.commands.adopt.fastBind(entity, entity.commands[moduleName], initParams));
+    jump: function (labelName, args) {
+        var jumpOp = Blocks.JumpOp.create(labelName, args);
+        parser.addOp(jumpOp);
     },
 
-    set:       parser._defaultParseFunc(entity.commands.set),
-    terminate: parser._defaultParseFunc(entity.commands.terminate),
-    print:     parser._defaultParseFunc(entity.commands.print),
-    jump:      parser._defaultParseFunc(entity.commands.jump),
-    lock:      parser._defaultParseFunc(entity.commands.lock),
-    unlock:    parser._defaultParseFunc(entity.commands.unlock),
-    zap:       parser._defaultParseFunc(entity.commands.zap),
-    restore:   parser._defaultParseFunc(entity.commands.restore),
-    spawn:     parser._defaultParseFunc(entity.commands.spawn),
-    die:       parser._defaultParseFunc(entity.commands.die),
-    become:    parser._defaultParseFunc(entity.commands.become),
-    exec:      parser._defaultParseFunc(entity.commands.exec)
+    adopt:     parser._defaultParseFunc('adopt'),
+    set:       parser._defaultParseFunc('set'),
+    terminate: parser._defaultParseFunc('terminate'),
+    print:     parser._defaultParseFunc('print'),
+    lock:      parser._defaultParseFunc('lock'),
+    unlock:    parser._defaultParseFunc('unlock'),
+    zap:       parser._defaultParseFunc('zap'),
+    restore:   parser._defaultParseFunc('restore'),
+    spawn:     parser._defaultParseFunc('spawn'),
+    die:       parser._defaultParseFunc('die'),
+    become:    parser._defaultParseFunc('become'),
+    exec:      parser._defaultParseFunc('exec')
 }};
 
 DefaultCommandSet.runCommands = function (entity) { return {
     end: function () {
         entity.ended = true;
-        entity.executingLabelBlock = null;
-        entity.executingBlock = null;
-        entity.executingBlockStack = [];
+        entity.executor.reset();
     },
 
     terminate: function () {
@@ -115,62 +162,33 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.board.terminate();
     },
 
-    if: function (condition) {
-        if (!condition.evaluate()) {
-            if (!entity.executingBlock.nextCondition()) {
-                entity.runPreviousBlock();
-            }
-        }
-    },
-
-    elif: function (condition) {
-        if (!condition.evaluate()) {
-            if (!entity.executingBlock.nextCondition()) {
-                entity.runPreviousBlock();
-            }
-        }
-    },
-
-    else: function () {
-    },
-
-    endif: function () {
-        entity.runPreviousBlock();
-    },
-
-    loop: function () {
-        if (!entity.executingBlock.iterate()) {
-            entity.runPreviousBlock();
-        }
-    },
-
-    endloop: function () {
-        entity.executingBlock.restart();
-    },
-
     print: function (text) {
         console.log(text);
         entity.cycleEnded = true;
     },
 
-    jump: function (label, varArgs) {
-        entity.gotoLabel(label, varArgs);
-    },
+    send: function (scope, label, args) {
+        var evaluatedArgs = [];
+        if (args instanceof Array) {
+            for (var i = 0; i < args.length; i++) {
+                evaluatedArgs.push(args[i] instanceof Evaluables.Evaluable ? args[i].evaluate(entity) : args[i]);
+            }
+        }
 
-    send: function (scope, label, varArgs) {
         var objects = scope.evaluate(entity);
         for (var i = 0; i < objects.length; i++) {
-            objects[i].gotoLabel(label, varArgs);
+            objects[i].gotoLabel(label, evaluatedArgs);
         }
     },
 
-    adopt: function (commandSet, initParams) {
+    adopt: function (moduleName, initParams) {
+        var commandSet = entity.executor.commands[moduleName];
         entity.adoptions.push(commandSet);
 
         if (typeof initParams === 'object') {
             Object.keys(initParams).forEach(function (key) {
                 var initVal = initParams[key];
-                initParams[key] = initVal instanceof Evaluables.Evaluable ? initVal.evaluate() : initVal;
+                initParams[key] = initVal instanceof Evaluables.Evaluable ? initVal.evaluate(entity) : initVal;
             })
         }
 
@@ -180,7 +198,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
     set: function (varName, value) {
         var resolvedName = varName.replace('@', '').replace('$', '');
         if (varName.indexOf('@') === 0) {
-            entity.executingBlock.variables[resolvedName] = value;
+            entity.executor.currentLabelFrame.variables[resolvedName] = value;
         }
         else if (varName.indexOf('$') === 0) {
             entity.variables[resolvedName] = value;
@@ -199,26 +217,21 @@ DefaultCommandSet.runCommands = function (entity) { return {
         entity.locked = false;
     },
 
-    zap: function (label) {
-        if (entity.labels[label]) {
-            entity.labels[label].disableActiveBlockRef();
-        }
+    zap: function (labelName) {
+        entity.executor.labelStore.disableCurrent(labelName);
     },
 
-    restore: function (label) {
-        if (entity.labels[label]) {
-            entity.labels[label].enablePreviousBlockRef();
-        }
+    restore: function (labelName) {
+        entity.executor.labelStore.enablePrevious(labelName);
     },
 
     spawn: function (objName, initVarArgs) {
         var evaluatedArgs = [];
         if (initVarArgs instanceof Array) {
             for (var i = 0; i < initVarArgs.length; i++) {
-                evaluatedArgs.push((initVarArgs[i] instanceof Evaluables.Evaluable) ? initVarArgs[i].evaluate() : initVarArgs[i]);
+                evaluatedArgs.push((initVarArgs[i] instanceof Evaluables.Evaluable) ? initVarArgs[i].evaluate(entity) : initVarArgs[i]);
             }
         }
-
         entity.board.spawnObject(objName, entity, evaluatedArgs);
     },
 
@@ -235,7 +248,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
         var evaluatedArgs = [];
         if (initVarArgs instanceof Array) {
             for (var i = 0; i < initVarArgs.length; i++) {
-                evaluatedArgs.push((initVarArgs[i] instanceof Evaluables.Evaluable) ? initVarArgs[i].evaluate() : initVarArgs[i]);
+                evaluatedArgs.push((initVarArgs[i] instanceof Evaluables.Evaluable) ? initVarArgs[i].evaluate(entity) : initVarArgs[i]);
             }
         }
 

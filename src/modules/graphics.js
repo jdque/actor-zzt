@@ -221,8 +221,8 @@ var PIXICommandSet = {};
 
 PIXICommandSet.parseCommands = function (parser, entity) {
     var pixi = {
-        color: parser._defaultParseFunc(entity.commands.pixi.color),
-        alpha: parser._defaultParseFunc(entity.commands.pixi.alpha)
+        color: parser._defaultParseFunc('pixi.color'),
+        alpha: parser._defaultParseFunc('pixi.alpha')
     };
 
     return {

@@ -4,31 +4,29 @@ function Evaluable() {
 Evaluable.evaluate = function () {
 }
 
-function DeferredFunction(func, entity) {
-    this.entity = entity;
+function DeferredFunction(func) {
     this.func = func;
 }
 
 DeferredFunction.prototype = Object.create(Evaluable.prototype);
 
-DeferredFunction.prototype.evaluate = function () {
-    return this.func.call(this.entity);
+DeferredFunction.prototype.evaluate = function (entity) {
+    return this.func.call(entity);
 }
 
-function Value(varStr, entity) {
-    this.entity = entity;
+function Value(varStr) {
     this.varStr = varStr;
 }
 
 Value.prototype = Object.create(Evaluable.prototype);
 
-Value.prototype.evaluate = function () {
+Value.prototype.evaluate = function (entity) {
     if (typeof this.varStr === 'string') {
         if (this.varStr[0] === '@') {
-            return this.entity.executingLabelBlock.variables[this.varStr.substr(1)];
+            return entity.executor.currentLabelFrame.variables[this.varStr.substr(1)];
         }
         else if (this.varStr[0] === '$') {
-            return this.entity.variables[this.varStr.substr(1)];
+            return entity.variables[this.varStr.substr(1)];
         }
     }
     else if (typeof this.varStr === 'function') {
@@ -36,17 +34,16 @@ Value.prototype.evaluate = function () {
     }
 }
 
-function Expression(expr, entity) {
-    this.entity = entity;
+function Expression(expr) {
     this.expr = new Function(
-        'return ' + expr.replace(/\@/g, 'this.executingLabelBlock.variables.').replace(/\$/g, 'this.variables.')
+        'return ' + expr.replace(/\@/g, 'this.executor.currentLabelFrame.variables.').replace(/\$/g, 'this.variables.')
     );
 }
 
 Expression.prototype = Object.create(Evaluable.prototype);
 
-Expression.prototype.evaluate = function () {
-    return this.expr.call(this.entity);
+Expression.prototype.evaluate = function (entity) {
+    return this.expr.call(entity);
 }
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

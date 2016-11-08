@@ -4,8 +4,8 @@ var DOMCommandSet = {};
 
 DOMCommandSet.parseCommands = function (parser, entity) {
     var html = {
-        exec: parser._defaultParseFunc(entity.commands.html.exec),
-        transition: parser._defaultParseFunc(entity.commands.html.transition)
+        exec: parser._defaultParseFunc('html.exec'),
+        transition: parser._defaultParseFunc('html.transition')
     };
 
     return {

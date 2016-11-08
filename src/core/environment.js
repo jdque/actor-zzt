@@ -22,12 +22,7 @@ function Entity(board, name, script, initVarParams) {
     this.locked = false;
 
     //Execution
-    this.labels = {};
-    this.blocks = [];
-    this.commands = {};
-    this.executingLabelBlock = null;
-    this.executingBlock = null;
-    this.executingBlockStack = [];
+    this.executor = null;
 }
 
 Entity.clone = function (entity) {
@@ -39,11 +34,12 @@ Entity.prototype.begin = function (initVarArgs) {
     this.gotoLabel('_start', initVarArgs);
 }
 
-Entity.prototype.gotoLabel = function (name, varArgs) {
-    if (this.locked || !this.labels[name])
+Entity.prototype.gotoLabel = function (labelName, args) {
+    if (this.locked || !this.executor.labelStore.hasEnabled(labelName)) {
         return;
+    }
 
-    if (!this.labels[name].getActiveBlockRef())
+    /*if (!this.labels[name].getActiveBlockRef())
         return;
 
     var blockRef = this.labels[name].getActiveBlockRef();
@@ -53,13 +49,16 @@ Entity.prototype.gotoLabel = function (name, varArgs) {
     this.executingLabelBlock.injectArguments(varArgs);
 
     this.executingBlock = this.executingLabelBlock;
-    this.executingBlockStack = [this.executingBlock];
+    this.executingBlockStack = [this.executingBlock];*/
+
+    var jumpOp = Blocks.JumpOp.create(labelName, args);
+    this.executor.execJumpOp(jumpOp);
 
     this.ended = false;
     this.cycleEnded = false;
 }
 
-Entity.prototype.createBlock = function (varParams) {
+/*Entity.prototype.createBlock = function (varParams) {
     var block = new Blocks.Block(varParams);
     this.blocks[block.id()] = block;
 
@@ -82,19 +81,21 @@ Entity.prototype.runBlock = function (block) {
 Entity.prototype.runPreviousBlock = function () {
     this.executingBlockStack.pop();
     this.executingBlock = this.executingBlockStack[this.executingBlockStack.length - 1];
-}
+}*/
 
 Entity.prototype.execute = function () {
     this.cycleEnded = false;
 
-    if (this.ended)
+    if (this.ended) {
         return;
+    }
 
     //this.executingBlock.execNext();
 
-    while (this.executingBlock.execNext()) {
-        if (this.cycleEnded || this.ended)
+    while (this.executor.step()) {
+        if (this.cycleEnded || this.ended) {
             break;
+        }
     }
 }
 
@@ -158,7 +159,7 @@ Board.prototype.start = function () {
     this.script = this.runScript;
     this.depth = 0;
     this.parent = this;
-    this.parser.parse(this);
+    this.executor = this.parser.parse(this);
     this.begin();
     this.instances[0]["_board"] = [];
     this.instances[0]["_board"].push(this);
@@ -239,7 +240,7 @@ Board.prototype.spawnObject = function (name, parent, initVarArgs) {
     var obj = Entity.clone(this.objects[name]);
     obj.depth = parent ? parent.depth + 1 : 0;
     obj.parent = parent || obj;
-    this.parser.parse(obj);
+    obj.executor = this.parser.parse(obj);
     obj.begin(initVarArgs);
 
     this.spawnedObjs.push(obj);
