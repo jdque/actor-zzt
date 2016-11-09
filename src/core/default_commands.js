@@ -10,8 +10,8 @@ DefaultCommandSet.parseCommands = function (parser) { return {
         return new Evaluables.Value(varStr);
     },
 
-    val: function (varStr) {
-        return new Evaluables.Value(varStr);
+    val: function (func) {
+        return new Evaluables.DeferredFunction(func);
     },
 
     expr: function (expr) {

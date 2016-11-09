@@ -14,24 +14,32 @@ DeferredFunction.prototype.evaluate = function (entity) {
     return this.func(entity);
 }
 
-function Value(varStr) {
-    this.varStr = varStr;
+function Value(target) {
+    this.target = target;
 }
 
 Value.prototype = Object.create(Evaluable.prototype);
 
 Value.prototype.evaluate = function (entity) {
-    if (typeof this.varStr === 'string') {
-        if (this.varStr[0] === '_') {
-            return entity.executor.currentLabelFrame.variables[this.varStr.substr(1)];
+    var outValue = null;
+
+    if (typeof this.target === 'string') {
+        if (this.target[0] === '_') {
+            outValue = entity.executor.currentLabelFrame.variables[this.target.substr(1)];
+        } else {
+            outValue = entity.variables[this.target];
         }
-        else {
-            return entity.variables[this.varStr];
-        }
+    } else if (this.target instanceof Array) {
+        outValue = this.target.map(function (varStr) {
+            if (varStr[0] === '_') {
+                return entity.executor.currentLabelFrame.variables[varStr.substr(1)];
+            } else {
+                return entity.variables[varStr];
+            }
+        });
     }
-    else if (typeof this.varStr === 'function') {
-        return this.varStr();
-    }
+
+    return outValue;
 }
 
 function Expression(expr) {

@@ -208,7 +208,7 @@ function onResourcesLoaded() {
         end()
 
         label('shoot', ['_x', '_y', '_dir'])
-            spawn('Bullet', [$('_x'), $('_y'), $('_dir')])
+            spawn('Bullet', $(['_x', '_y', '_dir']))
         end()
     });
 
