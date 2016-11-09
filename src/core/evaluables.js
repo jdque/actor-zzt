@@ -14,32 +14,38 @@ DeferredFunction.prototype.evaluate = function (entity) {
     return this.func(entity);
 }
 
-function Value(target) {
-    this.target = target;
+function Value(varStr) {
+    this.varStr = varStr;
 }
 
 Value.prototype = Object.create(Evaluable.prototype);
 
 Value.prototype.evaluate = function (entity) {
-    var outValue = null;
+    if (this.varStr[0] === '_') {
+        return entity.executor.currentLabelFrame.variables[this.varStr.substr(1)];
+    } else {
+        return entity.variables[this.varStr];
+    }
+}
 
-    if (typeof this.target === 'string') {
-        if (this.target[0] === '_') {
-            outValue = entity.executor.currentLabelFrame.variables[this.target.substr(1)];
+function ArrayValue(varStrs) {
+    this.varStrs = varStrs;
+}
+
+ArrayValue.prototype = Object.create(Evaluable.prototype);
+
+ArrayValue.prototype.evaluate = function (entity) {
+    var values = new Array(this.varStrs.length);
+
+    for (var i = 0; i < this.varStrs.length; i++) {
+        if (this.varStrs[i][0] === '_') {
+            values[i] = entity.executor.currentLabelFrame.variables[this.varStrs[i].substr(1)];
         } else {
-            outValue = entity.variables[this.target];
+            values[i] = entity.variables[this.varStrs[i]];
         }
-    } else if (this.target instanceof Array) {
-        outValue = this.target.map(function (varStr) {
-            if (varStr[0] === '_') {
-                return entity.executor.currentLabelFrame.variables[varStr.substr(1)];
-            } else {
-                return entity.variables[varStr];
-            }
-        });
     }
 
-    return outValue;
+    return values;
 }
 
 function Expression(expr) {
@@ -59,6 +65,7 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
         Evaluable: Evaluable,
         DeferredFunction: DeferredFunction,
         Value: Value,
+        ArrayValue: ArrayValue,
         Expression: Expression
     };
 }

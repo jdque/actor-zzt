@@ -6,8 +6,16 @@ var Scope = require('./scope.js');
 var DefaultCommandSet = {};
 
 DefaultCommandSet.parseCommands = function (parser) { return {
-    $: function (varStr) {
-        return new Evaluables.Value(varStr);
+    get: function (varSpec) {
+        if (typeof varSpec === 'string') {
+            return new Evaluables.Value(varSpec);
+        } else if (varSpec instanceof Array) {
+            return new Evaluables.ArrayValue(varSpec);
+        }
+    },
+
+    $: function (varSpec) {
+        return parser.commands.get(varSpec);
     },
 
     val: function (func) {
