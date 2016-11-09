@@ -22,11 +22,11 @@ Value.prototype = Object.create(Evaluable.prototype);
 
 Value.prototype.evaluate = function (entity) {
     if (typeof this.varStr === 'string') {
-        if (this.varStr[0] === '@') {
+        if (this.varStr[0] === '_') {
             return entity.executor.currentLabelFrame.variables[this.varStr.substr(1)];
         }
-        else if (this.varStr[0] === '$') {
-            return entity.variables[this.varStr.substr(1)];
+        else {
+            return entity.variables[this.varStr];
         }
     }
     else if (typeof this.varStr === 'function') {
@@ -36,7 +36,7 @@ Value.prototype.evaluate = function (entity) {
 
 function Expression(expr) {
     this.expr = new Function(
-        'return ' + expr.replace(/\@/g, 'this.executor.currentLabelFrame.variables.').replace(/\$/g, 'this.variables.')
+        'return ' + expr.replace(/\$\_/g, 'this.executor.currentLabelFrame.variables.').replace(/\$/g, 'this.variables.')
     );
 }
 

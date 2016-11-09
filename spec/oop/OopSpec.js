@@ -93,16 +93,16 @@ describe("Oop", function () {
 		it("should set variables and evaluate expressions", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$var', 'a')
-					print(val('$var'))
-					set('$var', 1)
-					print(val('$var'))
-					set('$var', expr('$var + 1'))
-					print(val('$var'))
-					set('$var', expr('1 === 1'))
-					print(val('$var'))
-					set('$var', expr('(Math.cos(0) + 1) * parseFloat("0.75")'))
-					print(val('$var'))
+					set('var', 'a')
+					print($('var'))
+					set('var', 1)
+					print($('var'))
+					set('var', expr('$var + 1'))
+					print($('var'))
+					set('var', expr('1 === 1'))
+					print($('var'))
+					set('var', expr('(Math.cos(0) + 1) * parseFloat("0.75")'))
+					print($('var'))
 					terminate()
 				});
 			});
@@ -121,9 +121,9 @@ describe("Oop", function () {
 				object('Player', function () {
 					jump('do', [1, 2])
 					end()
-					label('do', ['@param1', '@param2'])
-						set('@param1', expr('@param1 + 1'))
-						print(expr('@param1 + @param2'))
+					label('do', ['_param1', '_param2'])
+						set('_param1', expr('$_param1 + 1'))
+						print(expr('$_param1 + $_param2'))
 					terminate()
 				});
 			});
@@ -139,19 +139,19 @@ describe("Oop", function () {
 
 		it("should spawn objects with initialization variables", function (done) {
 			board.setup(function () {
-				object('Player', ['@param'], function () {
-					_if('@param === 1')
-						_if('@param === 1')
-							print(val('@param'))
+				object('Player', ['_param'], function () {
+					_if('$_param === 1')
+						_if('$_param === 1')
+							print($('_param'))
 						_endif()
 					_endif()
 					spawn('Child', [2, 3])
 					end()
 				});
 
-				object('Child', ['@param1', '@param2'], function () {
-					print(expr('@param1'))
-					print(expr('@param2'))
+				object('Child', ['_param1', '_param2'], function () {
+					print(expr('$_param1'))
+					print(expr('$_param2'))
 					terminate()
 				});
 			});
@@ -170,7 +170,7 @@ describe("Oop", function () {
 		it("should select the correct block in an if-else statement", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$var', 1)
+					set('var', 1)
 					_if('$var === 1')
 						print(1)
 					_endif()
@@ -207,10 +207,10 @@ describe("Oop", function () {
 		it("should loop a block a fixed number of times", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$var', 3)
+					set('var', 3)
 					loop('$var')
-						print(val('$var'))
-						set('$var', expr('$var - 1'))
+						print($('var'))
+						set('var', expr('$var - 1'))
 					endloop()
 					terminate()
 				});
@@ -228,7 +228,7 @@ describe("Oop", function () {
 		it("should not run a loop if the count expression is non-numeric", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$var', 'a')
+					set('var', 'a')
 					loop('$var')
 						print(expr('fail'))
 					endloop()
@@ -248,7 +248,7 @@ describe("Oop", function () {
 		it("should allow nested blocks", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$var', 0)
+					set('var', 0)
 					loop(2)
 						loop(2)
 							_if('$var % 2 === 0')
@@ -258,7 +258,7 @@ describe("Oop", function () {
 							_else()
 								print('b')
 							_endif()
-							set('$var', expr('$var + 1'))
+							set('var', expr('$var + 1'))
 						endloop()
 					endloop()
 					terminate()
@@ -303,7 +303,7 @@ describe("Oop", function () {
 		it("should allow jumping to the current label", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$count', 1)
+					set('count', 1)
 					jump('do')
 					end()
 					label('do')
@@ -311,7 +311,7 @@ describe("Oop", function () {
 						_if('$count === 3')
 							terminate()
 						_endif()
-						set('$count', expr('$count + 1'))
+						set('count', expr('$count + 1'))
 						jump('do')
 					end()
 				});
@@ -329,7 +329,7 @@ describe("Oop", function () {
 		it("should handle chained labels", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$var', 1)
+					set('var', 1)
 					jump('one')
 					end()
 					label('one')
@@ -337,7 +337,7 @@ describe("Oop", function () {
 					label('two')
 						_if('$var === 1')
 							print(1)
-							set('$var', 2)
+							set('var', 2)
 							jump('two')
 						_elif('$var === 2')
 							print(2)
@@ -360,14 +360,14 @@ describe("Oop", function () {
 		it("should handle chained labels with zapping", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$var', 1)
+					set('var', 1)
 					jump('label')
 					end()
 					label('label')
 					label('label')
 					label('label')
-						print(val('$var'))
-						set('$var', expr('$var + 1'))
+						print($('var'))
+						set('var', expr('$var + 1'))
 						zap('label')
 						jump('label')
 					end()
@@ -389,7 +389,7 @@ describe("Oop", function () {
 		it("should enable/disable labels with 'zap' and 'restore'", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$stop', false)
+					set('stop', false)
 					jump('do')
 					end()
 					label('do')
@@ -403,7 +403,7 @@ describe("Oop", function () {
 					end()
 					label('do')
 						print(2)
-						set('$stop', true)
+						set('stop', true)
 						restore('do')
 						jump('do')
 					end()
@@ -422,7 +422,7 @@ describe("Oop", function () {
 		it("should ignore non-existent labels", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					set('$stop', false)
+					set('stop', false)
 					jump('none')
 					print(1)
 					jump('zap')
@@ -439,7 +439,7 @@ describe("Oop", function () {
 							terminate()
 						_endif()
 						restore('restore')
-						set('$stop', true)
+						set('stop', true)
 						jump('restore')
 					end()
 				});
@@ -519,16 +519,16 @@ describe("Oop", function () {
 				object('Player', function () {
 					jump('do', ['a'])
 					end()
-					label('do', ['@param'])
-						print(val('@param'))
+					label('do', ['_param'])
+						print($('_param'))
 						send('Other', 'otherdo', [expr('1 + 1')])
 					end()
 				});
 
 				object('Other', function () {
 					end()
-					label('otherdo', ['@param'])
-						print(val('@param'))
+					label('otherdo', ['_param'])
+						print($('_param'))
 					terminate()
 				});
 			});

@@ -5,7 +5,11 @@ var Scope = require('./scope.js');
 
 var DefaultCommandSet = {};
 
-DefaultCommandSet.parseCommands = function (parser, entity) { return {
+DefaultCommandSet.parseCommands = function (parser) { return {
+    $: function (varStr) {
+        return new Evaluables.Value(varStr);
+    },
+
     val: function (varStr) {
         return new Evaluables.Value(varStr);
     },
@@ -77,7 +81,6 @@ DefaultCommandSet.parseCommands = function (parser, entity) { return {
 
     loop: function (count) {
         var loopBlock = Blocks.Block.create([]);
-
         parser
             .addOp(Ops.LoopOp.create(count, Ops.EnterOp.create(loopBlock[0])))
             .enter(loopBlock);
@@ -164,11 +167,11 @@ DefaultCommandSet.runCommands = function (entity) { return {
     },
 
     set: function (varName, value) {
-        var resolvedName = varName.replace('@', '').replace('$', '');
-        if (varName.indexOf('@') === 0) {
+        var resolvedName = varName.replace('_', '');
+        if (varName.indexOf('_') === 0) {
             entity.executor.currentLabelFrame.variables[resolvedName] = value;
         }
-        else if (varName.indexOf('$') === 0) {
+        else {
             entity.variables[resolvedName] = value;
         }
     },

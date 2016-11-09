@@ -124,11 +124,11 @@ function onResourcesLoaded() {
     });
 
     board.setup(function () {
-        object('Player', ['@x', '@y'], function () {
+        object('Player', ['_x', '_y'], function () {
             adopt('body', bodies.player)
             adopt('pixi', sprites.player)
             adopt('input')
-            body.move_to(val('@x'), val('@y'))
+            body.move_to($('_x'), $('_y'))
             jump('move')
             end()
 
@@ -159,10 +159,10 @@ function onResourcesLoaded() {
             end()
         });
 
-        object('Enemy', ['@x', '@y'], function () {
+        object('Enemy', ['_x', '_y'], function () {
             adopt('body', bodies.enemy)
             adopt('pixi', sprites.enemy)
-            body.move_to(val('@x'), val('@y'))
+            body.move_to($('_x'), $('_y'))
             pixi.alpha(0.5)
             jump('move')
             end()
@@ -177,11 +177,11 @@ function onResourcesLoaded() {
             die()
         });
 
-        object('Bullet', ['@x', '@y', '@dir'], function () {
+        object('Bullet', ['_x', '_y', '_dir'], function () {
             adopt('body', bodies.bullet)
             adopt('pixi', sprites.bullet)
-            body.move_to(val('@x'), val('@y'))
-            _if('@dir === "e"')
+            body.move_to($('_x'), $('_y'))
+            _if('$_dir === "e"')
                 body.move('/e')
             _endif()
             jump('loop')
@@ -207,8 +207,8 @@ function onResourcesLoaded() {
         spawn('Player', [640 / 2, 480 / 2])
         end()
 
-        label('shoot', ['@x', '@y', '@dir'])
-            spawn('Bullet', [val('@x'), val('@y'), val('@dir')])
+        label('shoot', ['_x', '_y', '_dir'])
+            spawn('Bullet', [$('_x'), $('_y'), $('_dir')])
         end()
     });
 

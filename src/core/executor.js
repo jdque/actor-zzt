@@ -133,7 +133,7 @@ Executor.prototype.execJumpOp = function (op) {
         if (i > params.length - 1) {
             continue;
         }
-        var varName = params[i].replace('\@', '');
+        var varName = params[i].replace('_', '');
         var value = (args[i] instanceof Evaluables.Evaluable) ? args[i].evaluate(this.entity) : args[i];
         this.currentLabelFrame.variables[varName] = value;
     }
