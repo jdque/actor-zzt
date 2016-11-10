@@ -136,7 +136,7 @@ Parser.prototype.parse = function (entity) {
     var commandVals = commandKeys.map(function (key) { return this.commands[key]; }, this);
 
     (new Function(commandKeys.join(','),
-        'label("_start", ' + varParamsStr + ');' +
+        'label("init", ' + varParamsStr + ');' +
         entity.script.toString().match(/{([\s\S]*)}/)[1] + ";" +
         'end();'
     )).apply(this, commandVals);

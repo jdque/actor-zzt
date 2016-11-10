@@ -15,6 +15,11 @@ LabelStore.prototype.add = function (labelOp) {
     }
 }
 
+LabelStore.prototype.clear = function (labelName) {
+    delete this.labels[labelName];
+    delete this.offsets[labelName];
+}
+
 LabelStore.prototype.get = function (labelName) {
     if (!this.hasEnabled(labelName)) {
         return null;

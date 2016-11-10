@@ -32,7 +32,7 @@ Entity.clone = function (entity) {
 
 Entity.prototype.begin = function (initVarArgs) {
     this.cycleEnded = false;
-    this.gotoLabel('_start', initVarArgs);
+    this.gotoLabel('init', initVarArgs);
 }
 
 Entity.prototype.gotoLabel = function (labelName, args) {

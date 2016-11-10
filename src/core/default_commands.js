@@ -33,7 +33,10 @@ DefaultCommandSet.parseCommands = function (parser) { return {
         }
 
         var label = Blocks.Label.create(name, params, parser.cursor.blockId, parser.cursor.offset);
-        parser.registerLabel(label);
+        if (name === 'init') {
+            parser.labelStore.clear(name);
+        }
+        parser.labelStore.add(label);
     },
 
     end: function () {
