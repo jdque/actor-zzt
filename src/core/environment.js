@@ -210,7 +210,19 @@ Board.prototype.spawnObject = function (name, parent, initVarArgs) {
     return obj;
 }
 
-Board.prototype.removeObject = function (entity) {
+Board.prototype.removeObject = function (entity, recursive) {
+    if (recursive) {
+        var children = this.getChildObjects(entity);
+        for (var i = 0; i < children.length; i++) {
+            this.removeObject(children[i]);
+        }
+    }
+
+    entity.locked = true;
+    entity.ended = true;
+    entity.cycleEnded = true;
+    entity.destroyAdoptions();
+
     this.deletedObjs.push(entity);
 }
 

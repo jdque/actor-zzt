@@ -215,12 +215,7 @@ DefaultCommandSet.runCommands = function (entity) { return {
     },
 
     die: function () {
-        entity.locked = true;
-        entity.ended = true;
-        entity.cycleEnded = true;
-        entity.destroyAdoptions();
-
-        entity.board.removeObject(entity);
+        entity.board.removeObject(entity, true);
     },
 
     become: function (name, initVarArgs) {

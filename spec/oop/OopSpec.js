@@ -584,6 +584,46 @@ describe("Oop", function () {
 			board.start();
 		});
 
+		it("should delete child objects recursively when parent is deleted", function (done) {
+			board.setup(function () {
+				object('Parent', function () {
+					spawn('Child')
+					end()
+					label('delete')
+						die()
+					end()
+				});
+				object('Child', function () {
+					spawn('Zygote')
+					end()
+					label('respond')
+						print('A')
+						send('[self].Zygote', 'respond')
+					end()
+				});
+				object('Zygote', function () {
+					end()
+					label('respond')
+						print('B')
+					end()
+				});
+			});
+			board.run(function () {
+				spawn('Parent')
+				wait(1)
+				send('[self].Parent', 'delete')
+				wait(1)
+				send('[self].Parent.Child', 'respond')
+				wait(3)
+				terminate()
+			});
+			board.finish(function () {
+				expect(console.history.toString()).toEqual([].toString())
+				done();
+			});
+			board.start();
+		});
+
 		it("should morph an entity into a new instance of another", function (done) {
 			board.setup(function () {
 				object('Human', function () {
