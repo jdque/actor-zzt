@@ -1,7 +1,7 @@
-var Evaluables = require('./evaluables.js');
-var Blocks = require('./blocks.js');
-var Ops = require('./ops.js');
-var Scope = require('./scope.js');
+var Evaluables = require('../core/evaluables.js');
+var Blocks = require('../core/blocks.js');
+var Ops = require('../core/ops.js');
+var Scope = require('../core/scope.js');
 
 function parseCommands(parser) { return {
     get: function (varSpec) {
