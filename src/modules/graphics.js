@@ -184,7 +184,7 @@ TextureCache.prototype.drawTiles = function (tiles, x, y, width, height) {
     var ctx = this.canvas.getContext('2d');
     for (var iy = 0; iy < height; iy++) {
         for (var ix = 0; ix < width; ix++) {
-            var tile = tiles[(ix * width) + iy];
+            var tile = tiles[(iy * width) + ix];
             var destX = x + ix * 8;
             var destY = y + iy * 8;
 
