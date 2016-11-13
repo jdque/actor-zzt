@@ -217,53 +217,45 @@ TextureCache.prototype.drawTiles = function (tiles, x, y, width, height) {
     }
 }
 
-var PIXICommandSet = {};
+function parseCommands(parser) { return {
+    color: parser._defaultParseFunc('pixi.color'),
+    alpha: parser._defaultParseFunc('pixi.alpha')
+}};
 
-PIXICommandSet.parseCommands = function (parser) {
-    var pixi = {
-        color: parser._defaultParseFunc('pixi.color'),
-        alpha: parser._defaultParseFunc('pixi.alpha')
-    };
+function runCommands(entity) { return {
+    __init__: function (params) {
+        var obj = new TileSprite(params.cache, entity.name, params.tiles, params.width, params.height);
+        obj.position.x = params.x;
+        obj.position.y = params.y;
 
-    return {
-        pixi: pixi
-    };
-};
+        entity.pixiObject = obj;
+        entity.pixiObject.stage = params.stage;
 
-PIXICommandSet.runCommands = function (entity) {
-    var pixi = {
-        __init__: function (params) {
-            var obj = new TileSprite(params.cache, entity.name, params.tiles, params.width, params.height);
-            obj.position.x = params.x;
-            obj.position.y = params.y;
+        entity.pixiObject.stage.addChild(obj);
+    },
 
-            entity.pixiObject = obj;
-            entity.pixiObject.stage = params.stage;
+    __destroy__: function () {
+        entity.pixiObject.stage.removeChild(entity.pixiObject);
+        entity.pixiObject = null;
+    },
 
-            entity.pixiObject.stage.addChild(obj);
-        },
-
-        __destroy__: function () {
-            entity.pixiObject.stage.removeChild(entity.pixiObject);
-            entity.pixiObject = null;
-        },
-
-        color: function (color) {
-            if (entity.pixiObject) {
-                entity.pixiObject.tint = color || 0xFFFFFF;
-            }
-        },
-
-        alpha: function (alpha) {
-            if (entity.pixiObject) {
-                entity.pixiObject.alpha = alpha || 1;
-            }
+    color: function (color) {
+        if (entity.pixiObject) {
+            entity.pixiObject.tint = color || 0xFFFFFF;
         }
-    };
+    },
 
-    return {
-        pixi: pixi
-    };
+    alpha: function (alpha) {
+        if (entity.pixiObject) {
+            entity.pixiObject.alpha = alpha || 1;
+        }
+    }
+}};
+
+var PIXICommandSet = {
+    parseCommands: parseCommands,
+    runCommands: runCommands,
+    defaultName: 'pixi'
 };
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

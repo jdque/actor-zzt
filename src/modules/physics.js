@@ -424,9 +424,7 @@ Spatial.prototype.query = function () {
     })(this);
 }
 
-var PhysicsCommandSet = {};
-
-PhysicsCommandSet.getDirectionDelta = function (dir, entity) {
+function getDirectionDelta(dir, entity) {
     var dx = 0;
     var dy = 0;
 
@@ -459,133 +457,127 @@ PhysicsCommandSet.getDirectionDelta = function (dir, entity) {
     return {dx: dx, dy: dy};
 }
 
-PhysicsCommandSet.parseCommands = function (parser) {
-    var body = {
-        blocked: function (dir) {
-            return new ZZT.DeferredFunction(function (entity) {
-                var blocked = false;
-                var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
+function parseCommands(parser) { return {
+    blocked: function (dir) {
+        return new ZZT.DeferredFunction(function (entity) {
+            var blocked = false;
+            var delta = getDirectionDelta(dir, entity);
 
-                entity.body.bounds.x += delta.dx;
-                entity.body.bounds.y += delta.dy;
-
-                var objs = entity.body.spatial.getIntersect(entity.body.bounds);
-                if (objs.length > 1) {
-                    blocked = true;
-                }
-
-                var tileMapCollide = entity.board.pixiObject.anyTileInRect(entity.body.bounds);
-                if (tileMapCollide) {
-                    blocked = true;
-                }
-
-                entity.body.bounds.x -= delta.dx;
-                entity.body.bounds.y -= delta.dy;
-
-                return blocked;
-            });
-        },
-
-        dir: function (dir) {
-            return {
-                evaluate: function (entity) {
-                    var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
-                    var objs = entity.body.spatial.query()
-                        .distance(entity.body.bounds, 1)
-                        .direction(entity.body.bounds, delta.dx / 8, delta.dy / 8)
-                        .get();
-                    return objs;
-                }
-            };
-        },
-
-        move_to: parser._defaultParseFunc('body.move_to'),
-        move_by: parser._defaultParseFunc('body.move_by'),
-
-        move: function (dirStr) {
-            var dirs = dirStr.split('/');
-            for (var i = 0; i < dirs.length; i++) {
-                if (dirs[i].length === 0)
-                    continue;
-
-                parser.addOp(ZZT.Ops.SimpleOp.create('body.move', [dirs[i]]));
-                parser.commands.wait(5);
-            }
-        }
-    };
-
-    return {
-        body: body
-    };
-};
-
-PhysicsCommandSet.runCommands = function (entity) {
-    var body = {
-        __init__: function (params) {
-            entity.body = {
-                bounds: params.bounds.clone(),
-                spatial: params.spatial,
-                lastDelta: {dx: 0, dy: 0}
-            };
-
-            entity.body.spatial.register(entity);
-        },
-
-        __destroy__: function () {
-            entity.body.spatial.unregister(entity);
-            entity.body = null;
-        },
-
-        move_to: function (x, y) {
-            if (!entity.body)
-                return;
-
-            entity.body.bounds.x = x;
-            entity.body.bounds.y = y;
-            entity.body.spatial.update(entity);
-
-            if (entity.pixiObject) {
-                entity.pixiObject.position.x = entity.body.bounds.x;
-                entity.pixiObject.position.y = entity.body.bounds.y;
-            }
-        },
-
-        move_by: function (dx, dy) {
-            if (!entity.body)
-                return;
-
-            entity.body.bounds.x += dx;
-            entity.body.bounds.y += dy;
+            entity.body.bounds.x += delta.dx;
+            entity.body.bounds.y += delta.dy;
 
             var objs = entity.body.spatial.getIntersect(entity.body.bounds);
             if (objs.length > 1) {
-                entity.body.bounds.x -= dx;
-                entity.body.bounds.y -= dy;
+                blocked = true;
             }
 
-            if (entity.board.pixiObject.anyTileInRect(entity.body.bounds)) {
-                entity.body.bounds.x -= dx;
-                entity.body.bounds.y -= dy;
+            var tileMapCollide = entity.board.pixiObject.anyTileInRect(entity.body.bounds);
+            if (tileMapCollide) {
+                blocked = true;
             }
 
-            entity.body.spatial.update(entity);
+            entity.body.bounds.x -= delta.dx;
+            entity.body.bounds.y -= delta.dy;
 
-            if (entity.pixiObject) {
-                entity.pixiObject.position.x = entity.body.bounds.x;
-                entity.pixiObject.position.y = entity.body.bounds.y;
+            return blocked;
+        });
+    },
+
+    dir: function (dir) {
+        return {
+            evaluate: function (entity) {
+                var delta = getDirectionDelta(dir, entity);
+                var objs = entity.body.spatial.query()
+                    .distance(entity.body.bounds, 1)
+                    .direction(entity.body.bounds, delta.dx / 8, delta.dy / 8)
+                    .get();
+                return objs;
             }
-        },
+        };
+    },
 
-        move: function (dir) {
-            var delta = PhysicsCommandSet.getDirectionDelta(dir, entity);
-            entity.executor.commands.body.move_by(delta.dx, delta.dy);
-            entity.body.lastDelta = delta;
+    move_to: parser._defaultParseFunc('body.move_to'),
+    move_by: parser._defaultParseFunc('body.move_by'),
+
+    move: function (dirStr) {
+        var dirs = dirStr.split('/');
+        for (var i = 0; i < dirs.length; i++) {
+            if (dirs[i].length === 0)
+                continue;
+
+            parser.addOp(ZZT.Ops.SimpleOp.create('body.move', [dirs[i]]));
+            parser.commands.wait(5);
         }
-    };
+    }
+}};
 
-    return {
-        body: body
-    };
+function runCommands(entity) { return {
+    __init__: function (params) {
+        entity.body = {
+            bounds: params.bounds.clone(),
+            spatial: params.spatial,
+            lastDelta: {dx: 0, dy: 0}
+        };
+
+        entity.body.spatial.register(entity);
+    },
+
+    __destroy__: function () {
+        entity.body.spatial.unregister(entity);
+        entity.body = null;
+    },
+
+    move_to: function (x, y) {
+        if (!entity.body)
+            return;
+
+        entity.body.bounds.x = x;
+        entity.body.bounds.y = y;
+        entity.body.spatial.update(entity);
+
+        if (entity.pixiObject) {
+            entity.pixiObject.position.x = entity.body.bounds.x;
+            entity.pixiObject.position.y = entity.body.bounds.y;
+        }
+    },
+
+    move_by: function (dx, dy) {
+        if (!entity.body)
+            return;
+
+        entity.body.bounds.x += dx;
+        entity.body.bounds.y += dy;
+
+        var objs = entity.body.spatial.getIntersect(entity.body.bounds);
+        if (objs.length > 1) {
+            entity.body.bounds.x -= dx;
+            entity.body.bounds.y -= dy;
+        }
+
+        if (entity.board.pixiObject.anyTileInRect(entity.body.bounds)) {
+            entity.body.bounds.x -= dx;
+            entity.body.bounds.y -= dy;
+        }
+
+        entity.body.spatial.update(entity);
+
+        if (entity.pixiObject) {
+            entity.pixiObject.position.x = entity.body.bounds.x;
+            entity.pixiObject.position.y = entity.body.bounds.y;
+        }
+    },
+
+    move: function (dir) {
+        var delta = getDirectionDelta(dir, entity);
+        entity.executor.commands.body.move_by(delta.dx, delta.dy);
+        entity.body.lastDelta = delta;
+    }
+}};
+
+var PhysicsCommandSet = {
+    parseCommands: parseCommands,
+    runCommands: runCommands,
+    defaultName: 'body'
 };
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

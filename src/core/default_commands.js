@@ -3,9 +3,7 @@ var Blocks = require('./blocks.js');
 var Ops = require('./ops.js');
 var Scope = require('./scope.js');
 
-var DefaultCommandSet = {};
-
-DefaultCommandSet.parseCommands = function (parser) { return {
+function parseCommands(parser) { return {
     get: function (varSpec) {
         if (typeof varSpec === 'string') {
             return new Evaluables.Value(varSpec);
@@ -133,7 +131,7 @@ DefaultCommandSet.parseCommands = function (parser) { return {
     exec:      parser._defaultParseFunc('exec')
 }};
 
-DefaultCommandSet.runCommands = function (entity) { return {
+function runCommands(entity) { return {
     end: function () {
         entity.ended = true;
         entity.executor.clearFrameStack();
@@ -240,6 +238,12 @@ DefaultCommandSet.runCommands = function (entity) { return {
         func(entity);
     }
 }};
+
+var DefaultCommandSet = {
+    parseCommands: parseCommands,
+    runCommands: runCommands,
+    defaultName: ''
+};
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = DefaultCommandSet;

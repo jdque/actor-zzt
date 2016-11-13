@@ -31,19 +31,37 @@ Parser.prototype.reset = function () {
     this.resetCursor();
 }
 
-Parser.prototype.registerModule = function (name, commandSet) {
+Parser.prototype.registerModule = function (module, customName) {
+    var name = typeof customName === 'string' ? customName : module.defaultName;
+
     for (var i = 0; i < this.modules.length; i++) {
         if (this.modules[i].name === name) {
             return;
         }
     }
 
+    var parseCommands = module.parseCommands;
+    var runCommands = module.runCommands;
+    if (name.length > 0) {
+        parseCommands = function (parser) {
+            var obj = {};
+            obj[name] = module.parseCommands.call(null, parser);
+            return obj;
+        };
+        runCommands = function (entity) {
+            var obj = {};
+            obj[name] = module.runCommands.call(null, entity);
+            return obj;
+        };
+    }
+
     this.modules.push({
         name: name,
-        commandSet: commandSet
+        parseCommands: parseCommands,
+        runCommands: runCommands
     });
 
-    Util.extend(this.commands, commandSet.parseCommands.call(null, this));
+    Util.extend(this.commands, parseCommands.call(null, this));
 }
 
 Parser.prototype.registerBlock = function (block) {
@@ -128,7 +146,7 @@ Parser.prototype.parse = function (entity) {
 
     var runCommands = {};
     this.modules.forEach(function (module) {
-        Util.extend(runCommands, module.commandSet.runCommands.call(null, entity));
+        Util.extend(runCommands, module.runCommands.call(null, entity));
     }, this);
 
     var varParamsStr = '["' + entity.initVarParams.join('","') + '"]';

@@ -112,10 +112,10 @@ function onResourcesLoaded() {
     };
 
     var RenderParser = new ZZT.Parser();
-    RenderParser.registerModule('default', ZZT.DefaultCommandSet);
-    RenderParser.registerModule('pixi', Graphics.PIXICommandSet);
-    RenderParser.registerModule('body', Physics.PhysicsCommandSet);
-    RenderParser.registerModule('input', Input.InputCommandSet);
+    RenderParser.registerModule(ZZT.DefaultCommandSet);
+    RenderParser.registerModule(Graphics.PIXICommandSet);
+    RenderParser.registerModule(Physics.PhysicsCommandSet);
+    RenderParser.registerModule(Input.InputCommandSet);
 
     var board = new ZZT.Board();
 

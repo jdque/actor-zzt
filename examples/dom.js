@@ -5,8 +5,8 @@ var board;
 
 function run() {
     var HTMLParser = new ZZT.Parser();
-    HTMLParser.registerModule('default', ZZT.DefaultCommandSet);
-    HTMLParser.registerModule('html', DOM.DOMCommandSet);
+    HTMLParser.registerModule(ZZT.DefaultCommandSet);
+    HTMLParser.registerModule(DOM.DOMCommandSet);
 
     board = new ZZT.Board();
 
