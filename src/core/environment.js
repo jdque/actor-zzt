@@ -120,7 +120,7 @@ Board.prototype.start = function () {
     //Run root entity script
     this.script = this.runScript;
     this.depth = 0;
-    this.parent = this;
+    this.parent = null;
     this.executor = this.parser.parse(this);
     this.begin();
     this.instances[0]["_board"] = [];

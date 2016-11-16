@@ -35,8 +35,8 @@ function onResourcesLoaded() {
     document.body.appendChild(renderer.view);
 
     var cacheCanvas = document.createElement('canvas');
-    cacheCanvas.width = 640;
-    cacheCanvas.height = 640;
+    cacheCanvas.width = 1280;
+    cacheCanvas.height = 1280;
 
     var textureCache = new Graphics.TextureCache(cacheCanvas, TILESET);
 
@@ -47,9 +47,33 @@ function onResourcesLoaded() {
     tilePalette.setEntry(3, new Graphics.Tile({fg: 0x0000FF, bg: 0x000000, char: 219}));
     tilePalette.setEntry(4, new Graphics.Tile({fg: 0xFFFFFF, bg: 0x000000, char: 7}));
 
+    var top = new Array(80).fill(1);
+    var side = new Array(80).fill(0);
+    side[0] = 1;
+    side[1] = 1;
+    side[side.length - 1] = 1;
+    side[side.length - 2] = 1;
+
+    var tilemap = top.concat(top);
+    for (var i = 0; i < 56; i++) {
+        tilemap = tilemap.concat(side);
+    }
+    tilemap = tilemap.concat(top).concat(top);
+    var tilemapCollider = new Physics.TilemapCollider(tilemap, 80, 60);
+
+    tilemaps = {
+        board: {
+            stage: stage,
+            cache: textureCache,
+            tiles: tilePalette.convertToTiles(tilemap),
+            width: 80, height: 60,
+            x: 0, y: 0
+        }
+    };
+
     var spatial = new Physics.Spatial(new Physics.GridHash(32));
 
-        entities = {
+    entities = {
         player: {
             sprite: {
                 stage: stage,
@@ -62,7 +86,8 @@ function onResourcesLoaded() {
             },
             body: {
                 bounds: new PIXI.Rectangle(0, 0, 16, 16),
-                spatial: spatial
+                spatial: spatial,
+                tilemap: tilemapCollider
             }
         },
         enemy: {
@@ -78,7 +103,8 @@ function onResourcesLoaded() {
             },
             body: {
                 bounds: new PIXI.Rectangle(0, 0, 24, 24),
-                spatial: spatial
+                spatial: spatial,
+                tilemap: tilemapCollider
             }
         },
         bullet: {
@@ -91,23 +117,9 @@ function onResourcesLoaded() {
             },
             body: {
                 bounds: new PIXI.Rectangle(0, 0, 8, 8),
-                spatial: spatial
+                spatial: spatial,
+                tilemap: tilemapCollider
             }
-        }
-    };
-
-    tilemaps = {
-        board: {
-            stage: stage,
-            cache: textureCache,
-            tiles: tilePalette.convertToTiles(
-                [1, 1, 1, 1, 1,
-                 1, 0, 0, 0, 1,
-                 1, 0, 0, 0, 1,
-                 1, 0, 0, 0, 1,
-                 1, 1, 1, 1, 1]),
-            width: 5, height: 5,
-            x: 0, y: 0
         }
     };
 

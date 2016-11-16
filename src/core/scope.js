@@ -59,7 +59,7 @@ Scope.prototype.children = function (entity) {
 }
 
 Scope.prototype.parent = function (entity) {
-    return entity.parent;
+    return entity.parent || entity;
 }
 
 Scope.prototype.siblings = function (entity) {

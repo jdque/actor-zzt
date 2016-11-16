@@ -44,37 +44,6 @@ TileSprite.prototype.setTiles = function (tiles, width, height) {
     this.tileHeight = height;
 }
 
-TileSprite.prototype.getTile = function (tileX, tileY) {
-    if (tileX > this.tileWidth - 1 || tileY > this.tileHeight - 1) {
-        return null;
-    }
-    return this.tiles[this.tileWidth * tileY + tileX];
-}
-
-TileSprite.prototype.getTilesInRect = function (rect) {
-    var tiles = [];
-    for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
-        for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
-            tiles.push(this.getTile(x / 8, y / 8));
-        }
-    }
-
-    return tiles;
-}
-
-TileSprite.prototype.anyTileInRect = function (rect) {
-    for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
-        for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
-            var tile = this.getTile(x / 8, y / 8);
-            if (tile && tile.char !== 0) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
 function TextureCache(canvas, tileset) {
     this.tileset = tileset;
     this.baseTexture = PIXI.Texture.fromCanvas(canvas);
@@ -229,13 +198,16 @@ function runCommands(entity) { return {
         obj.position.y = params.y;
 
         entity.pixiObject = obj;
-        entity.pixiObject.stage = params.stage;
 
-        entity.pixiObject.stage.addChild(obj);
+        if (entity.parent && entity.parent.pixiObject) {
+            entity.parent.pixiObject.addChild(obj);
+        } else {
+            params.stage.addChild(obj);
+        }
     },
 
     __destroy__: function () {
-        entity.pixiObject.stage.removeChild(entity.pixiObject);
+        entity.pixiObject.parent.removeChild(entity.pixiObject);
         entity.pixiObject = null;
     },
 

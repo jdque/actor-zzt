@@ -233,6 +233,23 @@ Spatial.prototype.getIntersect = function (rect, offsetX, offsetY) {
     return objs;
 }
 
+Spatial.prototype.anyIntersect = function (rect, offsetX, offsetY, excludeObject) {
+    rect.x += offsetX || 0;
+    rect.y += offsetY || 0;
+
+    var objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
+    for (var i = objs.length - 1; i >= 0; i--) {
+        if (this.isIntersect(objs[i].body.bounds, rect) && objs[i] !== excludeObject) {
+            return true;
+        }
+    }
+
+    rect.x -= offsetX || 0;
+    rect.y -= offsetY || 0;
+
+    return false;
+}
+
 Spatial.prototype.getInside = function (rect, offsetX, offsetY) {
     rect.x += offsetX || 0;
     rect.y += offsetY || 0;
@@ -424,6 +441,43 @@ Spatial.prototype.query = function () {
     })(this);
 }
 
+function TilemapCollider(tilemap, width, height) {
+    this.tilemap = tilemap;
+    this.width = width;
+    this.height = height;
+}
+
+TilemapCollider.prototype.getTile = function (x, y) {
+    if (x > this.width - 1 || y > this.height - 1) {
+        return null;
+    }
+    return this.tilemap[this.width * y + x];
+}
+
+TilemapCollider.prototype.getTilesInRect = function (rect) {
+    var tiles = [];
+    for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
+        for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
+            tiles.push(this.getTile(x / 8, y / 8));
+        }
+    }
+
+    return tiles;
+}
+
+TilemapCollider.prototype.anyTileInRect = function (rect) {
+    for (var y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
+        for (var x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
+            var tile = this.getTile(x / 8, y / 8);
+            if (tile !== 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 function getDirectionDelta(dir, entity) {
     var dx = 0;
     var dy = 0;
@@ -466,13 +520,10 @@ function parseCommands(parser) { return {
             entity.body.bounds.x += delta.dx;
             entity.body.bounds.y += delta.dy;
 
-            var objs = entity.body.spatial.getIntersect(entity.body.bounds);
-            if (objs.length > 1) {
+            if (entity.body.spatial.anyIntersect(entity.body.bounds, 0, 0, entity)) {
                 blocked = true;
             }
-
-            var tileMapCollide = entity.board.pixiObject.anyTileInRect(entity.body.bounds);
-            if (tileMapCollide) {
+            else if (entity.body.tilemap.anyTileInRect(entity.body.bounds)) {
                 blocked = true;
             }
 
@@ -516,6 +567,7 @@ function runCommands(entity) { return {
         entity.body = {
             bounds: params.bounds.clone(),
             spatial: params.spatial,
+            tilemap: params.tilemap,
             lastDelta: {dx: 0, dy: 0}
         };
 
@@ -548,13 +600,11 @@ function runCommands(entity) { return {
         entity.body.bounds.x += dx;
         entity.body.bounds.y += dy;
 
-        var objs = entity.body.spatial.getIntersect(entity.body.bounds);
-        if (objs.length > 1) {
+        if (entity.body.spatial.anyIntersect(entity.body.bounds, 0, 0, entity)) {
             entity.body.bounds.x -= dx;
             entity.body.bounds.y -= dy;
         }
-
-        if (entity.board.pixiObject.anyTileInRect(entity.body.bounds)) {
+        else if (entity.body.tilemap.anyTileInRect(entity.body.bounds)) {
             entity.body.bounds.x -= dx;
             entity.body.bounds.y -= dy;
         }
@@ -584,6 +634,7 @@ if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = {
         GridHash: GridHash,
         Spatial: Spatial,
+        TilemapCollider: TilemapCollider,
         PhysicsCommandSet: PhysicsCommandSet
     };
 }
