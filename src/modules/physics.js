@@ -520,10 +520,10 @@ function parseCommands(parser) { return {
             entity.body.bounds.x += delta.dx;
             entity.body.bounds.y += delta.dy;
 
-            if (entity.body.spatial.anyIntersect(entity.body.bounds, 0, 0, entity)) {
+            if (entity.parent.body.spatial.anyIntersect(entity.body.bounds, 0, 0, entity)) {
                 blocked = true;
             }
-            else if (entity.body.tilemap.anyTileInRect(entity.body.bounds)) {
+            else if (entity.parent.body.tilemap.anyTileInRect(entity.body.bounds)) {
                 blocked = true;
             }
 
@@ -538,7 +538,7 @@ function parseCommands(parser) { return {
         return {
             evaluate: function (entity) {
                 var delta = getDirectionDelta(dir, entity);
-                var objs = entity.body.spatial.query()
+                var objs = entity.parent.body.spatial.query()
                     .distance(entity.body.bounds, 1)
                     .direction(entity.body.bounds, delta.dx / 8, delta.dy / 8)
                     .get();
@@ -565,17 +565,21 @@ function parseCommands(parser) { return {
 function runCommands(entity) { return {
     __init__: function (params) {
         entity.body = {
-            bounds: params.bounds.clone(),
-            spatial: params.spatial,
-            tilemap: params.tilemap,
+            bounds: new PIXI.Rectangle(0, 0, params.width * 8, params.height * 8),
+            spatial: new Spatial(new GridHash(32)),
+            tilemap: new TilemapCollider(params.tiles, params.width, params.height),
             lastDelta: {dx: 0, dy: 0}
         };
 
-        entity.body.spatial.register(entity);
+        if (entity.parent && entity.parent.body) {
+            entity.parent.body.spatial.register(entity);
+        }
     },
 
     __destroy__: function () {
-        entity.body.spatial.unregister(entity);
+        if (entity.parent && entity.parent.body) {
+            entity.parent.body.spatial.unregister(entity);
+        }
         entity.body = null;
     },
 
@@ -585,7 +589,7 @@ function runCommands(entity) { return {
 
         entity.body.bounds.x = x;
         entity.body.bounds.y = y;
-        entity.body.spatial.update(entity);
+        entity.parent.body.spatial.update(entity);
 
         if (entity.pixiObject) {
             entity.pixiObject.position.x = entity.body.bounds.x;
@@ -600,16 +604,16 @@ function runCommands(entity) { return {
         entity.body.bounds.x += dx;
         entity.body.bounds.y += dy;
 
-        if (entity.body.spatial.anyIntersect(entity.body.bounds, 0, 0, entity)) {
+        if (entity.parent.body.spatial.anyIntersect(entity.body.bounds, 0, 0, entity)) {
             entity.body.bounds.x -= dx;
             entity.body.bounds.y -= dy;
         }
-        else if (entity.body.tilemap.anyTileInRect(entity.body.bounds)) {
+        else if (entity.parent.body.tilemap.anyTileInRect(entity.body.bounds)) {
             entity.body.bounds.x -= dx;
             entity.body.bounds.y -= dy;
         }
 
-        entity.body.spatial.update(entity);
+        entity.parent.body.spatial.update(entity);
 
         if (entity.pixiObject) {
             entity.pixiObject.position.x = entity.body.bounds.x;

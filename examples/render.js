@@ -59,19 +59,22 @@ function onResourcesLoaded() {
         tilemap = tilemap.concat(side);
     }
     tilemap = tilemap.concat(top).concat(top);
-    var tilemapCollider = new Physics.TilemapCollider(tilemap, 80, 60);
 
-    tilemaps = {
-        board: {
-            stage: stage,
-            cache: textureCache,
-            tiles: tilePalette.convertToTiles(tilemap),
-            width: 80, height: 60,
-            x: 0, y: 0
+    boards = {
+        default: {
+            sprite: {
+                stage: stage,
+                cache: textureCache,
+                tiles: tilePalette.convertToTiles(tilemap),
+                width: 80, height: 60,
+                x: 0, y: 0
+            },
+            body: {
+                tiles: tilemap,
+                width: 80, height: 60
+            }
         }
     };
-
-    var spatial = new Physics.Spatial(new Physics.GridHash(32));
 
     entities = {
         player: {
@@ -85,9 +88,9 @@ function onResourcesLoaded() {
                 x: 320, y: 240
             },
             body: {
-                bounds: new PIXI.Rectangle(0, 0, 16, 16),
-                spatial: spatial,
-                tilemap: tilemapCollider
+                tiles: [1, 1,
+                        1, 1],
+                width: 2, height: 2
             }
         },
         enemy: {
@@ -102,9 +105,10 @@ function onResourcesLoaded() {
                 x: 0, y: 0
             },
             body: {
-                bounds: new PIXI.Rectangle(0, 0, 24, 24),
-                spatial: spatial,
-                tilemap: tilemapCollider
+                tiles: [1, 1, 1,
+                        1, 1, 1,
+                        1, 1, 1],
+                width: 3, height: 3
             }
         },
         bullet: {
@@ -116,9 +120,8 @@ function onResourcesLoaded() {
                 x: 0, y: 0
             },
             body: {
-                bounds: new PIXI.Rectangle(0, 0, 8, 8),
-                spatial: spatial,
-                tilemap: tilemapCollider
+                tiles: [1],
+                width: 1, height: 1
             }
         }
     };
@@ -220,7 +223,8 @@ function onResourcesLoaded() {
         })
     });
     board.run(function () {
-        adopt('pixi', tilemaps.board)
+        adopt('body', boards.default.body)
+        adopt('pixi', boards.default.sprite)
         loop(100)
             spawn('Enemy', [
                 expr('Math.floor(Math.random() * 640 / 8) * 8'),
