@@ -30,9 +30,9 @@ Entity.clone = function (entity) {
     return new Entity(entity.board, entity.name, entity.script, entity.initVarParams);
 }
 
-Entity.prototype.begin = function (initVarArgs) {
+Entity.prototype.begin = function (initArgs) {
     this.cycleEnded = false;
-    this.gotoLabel('init', initVarArgs);
+    this.gotoLabel('init', initArgs);
 }
 
 Entity.prototype.gotoLabel = function (labelName, args) {
@@ -190,7 +190,7 @@ Board.prototype.defineObject = function (name, varParamsOrScript, script) {
     return obj;
 }
 
-Board.prototype.spawnObject = function (name, parent, initVarArgs) {
+Board.prototype.spawnObject = function (name, parent, initArgs) {
     if (!this.objects[name])
         return;
 
@@ -203,7 +203,7 @@ Board.prototype.spawnObject = function (name, parent, initVarArgs) {
     obj.depth = parent ? parent.depth + 1 : 0;
     obj.parent = parent || obj;
     obj.executor = this.parser.parse(obj);
-    obj.begin(initVarArgs);
+    obj.begin(initArgs);
 
     this.spawnedObjs.push(obj);
 
@@ -226,8 +226,8 @@ Board.prototype.removeObject = function (entity, recursive) {
     this.deletedObjs.push(entity);
 }
 
-Board.prototype.replaceObject = function (target, newName, initVarArgs) {
-    var newObject = this.spawnObject(this.objects[newName].name, target.parent, initVarArgs);
+Board.prototype.replaceObject = function (target, newName, initArgs) {
+    var newObject = this.spawnObject(this.objects[newName].name, target.parent, initArgs);
 
     var children = this.getChildObjects(target);
     for (var i = 0; i < children.length; i++) {

@@ -205,33 +205,19 @@ function runCommands(entity) { return {
         entity.executor.labelStore.enablePrevious(labelName);
     },
 
-    spawn: function (objName, initVarArgs) {
-        var evaluatedArgs = [];
-        if (initVarArgs instanceof Array) {
-            for (var i = 0; i < initVarArgs.length; i++) {
-                evaluatedArgs.push((initVarArgs[i] instanceof Evaluables.Evaluable) ? initVarArgs[i].evaluate(entity) : initVarArgs[i]);
-            }
-        }
-        entity.board.spawnObject(objName, entity, evaluatedArgs);
+    spawn: function (objName, initArgs) {
+        entity.board.spawnObject(objName, entity, initArgs);
     },
 
     die: function () {
         entity.board.removeObject(entity, true);
     },
 
-    become: function (name, initVarArgs) {
-        var evaluatedArgs = [];
-        if (initVarArgs instanceof Array) {
-            for (var i = 0; i < initVarArgs.length; i++) {
-                evaluatedArgs.push((initVarArgs[i] instanceof Evaluables.Evaluable) ? initVarArgs[i].evaluate(entity) : initVarArgs[i]);
-            }
-        }
-
+    become: function (name, initArgs) {
         entity.ended = true;
         entity.cycleEnded = true;
         entity.destroyAdoptions();
-
-        entity.board.replaceObject(entity, name, evaluatedArgs);
+        entity.board.replaceObject(entity, name, initArgs);
     },
 
     exec: function (func) {
