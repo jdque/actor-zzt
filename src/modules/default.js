@@ -118,6 +118,8 @@ function parseCommands(parser) { return {
     },
 
     adopt:     parser._defaultParseFunc('adopt'),
+    join:      parser._defaultParseFunc('join'),
+    leave:     parser._defaultParseFunc('leave'),
     set:       parser._defaultParseFunc('set'),
     terminate: parser._defaultParseFunc('terminate'),
     print:     parser._defaultParseFunc('print'),
@@ -173,6 +175,14 @@ function runCommands(entity) { return {
         }
 
         commandSet.__init__(initParams);
+    },
+
+    join: function (groupName) {
+        entity.board.addObjectToGroup(groupName, entity);
+    },
+
+    leave: function (groupName) {
+        entity.board.removeObjectFromGroup(groupName, entity);
     },
 
     set: function (varName, value) {

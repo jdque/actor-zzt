@@ -483,6 +483,33 @@ describe("Oop", function () {
 			board.start();
 		});
 
+		it("should allow objects to send messages to itself", function (done) {
+			board.setup(function () {
+				object('Player', function () {
+					send('[self]', 'do')
+					end()
+					label('do')
+						print(1)
+					end()
+				});
+			});
+			board.run(function () {
+				spawn('Player')
+				wait(1)
+				send('[board]', 'do')
+				end()
+				label('do')
+					print(2)
+					terminate()
+				end()
+			});
+			board.finish(function () {
+				expect(console.history.toString()).toEqual([1, 2].toString())
+				done();
+			});
+			board.start();
+		});
+
 		it("should ignore messages if an object is locked", function (done) {
 			board.setup(function () {
 				object('ObjectA', function () {
@@ -724,6 +751,56 @@ describe("Oop", function () {
 			});
 			board.finish(function () {
 				expect(console.history.toString()).toEqual(['A', 'B', 'B', 'AA', 'AA', 'ABA', 'AA', 'AA'].toString())
+				done();
+			});
+			board.start();
+		});
+
+		it("should allow objects to join/leave groups and scope to them", function (done) {
+			board.setup(function () {
+				group('GroupA')
+				group('GroupB')
+				group('GroupC')
+
+				object('A1', function () {
+					join('GroupA')
+					spawn('A2-B1')
+					spawn('A2-B1')
+					end()
+					label('do')
+						print('A1')
+					end()
+				});
+				object('A2-B1', function () {
+					join('GroupA')
+					join('GroupB')
+					end()
+					label('do')
+						print('A2-B1')
+						leave('GroupB')
+					end()
+				});
+			});
+			board.run(function () {
+				join('GroupC')
+				spawn('A1')
+				spawn('B1')
+				wait(2)
+				send('GroupB', 'do')
+				wait(2)
+				send('GroupA', 'do')
+				wait(2)
+				send('GroupB', 'do')
+				wait(2)
+				send('GroupC', 'do')
+				end()
+				label('do')
+					print('C1')
+					terminate()
+				end()
+			});
+			board.finish(function () {
+				expect(console.history.toString()).toEqual(['A2-B1', 'A2-B1', 'A2-B1', 'A2-B1', 'A1', 'C1'].toString())
 				done();
 			});
 			board.start();

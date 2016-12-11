@@ -1,10 +1,10 @@
 function Scope(scope) {
     var self     = "[obj].forEach(function (obj) {\n";
-    var all      = "children(obj).forEach(function (obj) {\n";
-    var name     = "children(obj).filter(function (obj) { return obj.name === '{name}'}).forEach(function (obj) {\n";
+    var children = "children(obj).forEach(function (obj) {\n";
     var parent   = "[parent(obj)].forEach(function (obj) {\n";
     var siblings = "siblings(obj).forEach(function (obj) {\n";
     var board    = "[board(obj)].forEach(function (obj) {\n";
+    var name     = "name(obj, '{name}').forEach(function (obj) {\n";
     var out      = "outObjs.push(obj);\n";
 
     var funcParts = [];
@@ -18,11 +18,11 @@ function Scope(scope) {
                 funcParts.push(self);
                 break;
             case '*':
-            case "[all]":
+            case "[children]":
                 if (idx === 0) {
                     funcParts.push(parent);
                 }
-                funcParts.push(all);
+                funcParts.push(children);
                 break;
             case '<':
             case '[parent]':
@@ -51,7 +51,7 @@ function Scope(scope) {
     }
     funcStr += 'return outObjs;';
 
-    this.scopeFunc = new Function('obj, children, parent, siblings, board', funcStr);
+    this.scopeFunc = new Function('obj, children, parent, siblings, name, board', funcStr);
 }
 
 Scope.prototype.children = function (entity) {
@@ -63,9 +63,27 @@ Scope.prototype.parent = function (entity) {
 }
 
 Scope.prototype.siblings = function (entity) {
-    return entity.board.getChildObjects(entity.parent).filter(function (sibling) {
-        return sibling.id !== entity.id;
-    });
+    return entity.board
+        .getChildObjects(entity.parent)
+        .filter(function (sibling) {
+            return sibling.id !== entity.id;
+        });
+}
+
+Scope.prototype.name = function (entity, name) {
+    var entities = [];
+
+    if (entity.board.isObjectDefined(name)) {
+        entities = entity.board
+            .getChildObjects(entity)
+            .filter(function (child) {
+                return child.name === name;
+            });
+    } else if (entity.board.isGroupDefined(name)) {
+        entities = entity.board.getObjectsInGroup(name);
+    }
+
+    return entities;
 }
 
 Scope.prototype.board = function (entity) {
@@ -73,7 +91,7 @@ Scope.prototype.board = function (entity) {
 }
 
 Scope.prototype.evaluate = function (entity) {
-    return this.scopeFunc(entity, this.children, this.parent, this.siblings, this.board) || [];
+    return this.scopeFunc(entity, this.children, this.parent, this.siblings, this.name, this.board) || [];
 }
 
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

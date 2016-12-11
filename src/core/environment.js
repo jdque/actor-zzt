@@ -18,9 +18,11 @@ function Entity(board, name, script, initVarParams) {
     //State
     this.variables = {};
     this.adoptions = [];
+    this.groups = [];
     this.ended = false;
     this.cycleEnded = false;
     this.locked = false;
+    this.pendingJumpOp = null;
 
     //Execution
     this.executor = null;
@@ -40,9 +42,7 @@ Entity.prototype.gotoLabel = function (labelName, args) {
         return;
     }
 
-    var jumpOp = Ops.JumpOp.create(labelName, args);
-    this.executor.execJumpOp(jumpOp);
-
+    this.pendingJumpOp = Ops.JumpOp.create(labelName, args);
     this.ended = false;
     this.cycleEnded = false;
 }
@@ -54,9 +54,19 @@ Entity.prototype.execute = function () {
         return;
     }
 
+    //TODO - needed in case an object sends a message to itself. Figure out a better way to do this?
+    if (this.pendingJumpOp) {
+        this.executor.execJumpOp(this.pendingJumpOp);
+        this.pendingJumpOp = null;
+    }
+
     while (this.executor.step()) {
         if (this.cycleEnded || this.ended) {
             break;
+        }
+        if (this.pendingJumpOp) {
+            this.executor.execJumpOp(this.pendingJumpOp);
+            this.pendingJumpOp = null;
         }
     }
 }
@@ -81,6 +91,7 @@ function Board() {
 
     //Execution
     this.instances = [{}];
+    this.instanceGroups = {};
     this.spawnedObjs = [];
     this.deletedObjs = [];
 
@@ -114,6 +125,7 @@ Board.prototype.start = function () {
     //Run setup
     (new Function(
         'var object = this.defineObject.bind(this);' +
+        'var group = this.defineGroup.bind(this);' +
         this.setupFunc.toString().replace("function ()", "")
     )).call(this);
 
@@ -190,6 +202,10 @@ Board.prototype.defineObject = function (name, varParamsOrScript, script) {
     return obj;
 }
 
+Board.prototype.isObjectDefined = function (name) {
+    return this.objects[name] != null;
+}
+
 Board.prototype.spawnObject = function (name, parent, initArgs) {
     if (!this.objects[name])
         return;
@@ -223,6 +239,7 @@ Board.prototype.removeObject = function (entity, recursive) {
     entity.cycleEnded = true;
     entity.destroyAdoptions();
 
+    this.removeObjectFromAllGroups(entity);
     this.deletedObjs.push(entity);
 }
 
@@ -256,6 +273,40 @@ Board.prototype.getChildObjects = function (entity) {
     }
 
     return children;
+}
+
+Board.prototype.defineGroup = function (group) {
+    this.instanceGroups[group] = [];
+}
+
+Board.prototype.isGroupDefined = function (group) {
+    return this.instanceGroups[group] != null;
+}
+
+Board.prototype.addObjectToGroup = function (group, entity) {
+    if (!this.instanceGroups[group] || this.instanceGroups[group].indexOf(entity) >= 0)
+        return;
+
+    this.instanceGroups[group].push(entity);
+    entity.groups.push(group);
+}
+
+Board.prototype.removeObjectFromGroup = function (group, entity) {
+    if (!this.instanceGroups[group] || this.instanceGroups[group].indexOf(entity) === -1)
+        return;
+
+    this.instanceGroups[group].splice(this.instanceGroups[group].indexOf(entity), 1);
+    entity.groups.splice(entity.groups.indexOf(group), 1);
+}
+
+Board.prototype.removeObjectFromAllGroups = function (entity) {
+    for (var i = entity.groups.length - 1; i >= 0; i--) {
+        this.removeObjectFromGroup(entity.groups[i], entity);
+    }
+}
+
+Board.prototype.getObjectsInGroup = function (group) {
+    return this.instanceGroups[group] || null;
 }
 
 Board.prototype.terminate = function () {
