@@ -2,6 +2,7 @@ var Util = require('./util.js');
 var Evaluables = require('./evaluables.js');
 var Blocks = require('./blocks.js');
 var Ops = require('./ops.js');
+var Group = require('./group.js');
 var Scope = require('./scope.js');
 var Parser = require('./parser.js');
 
@@ -91,9 +92,9 @@ function Board() {
 
     //Execution
     this.instances = [{}];
-    this.instanceGroups = {};
     this.spawnedObjs = [];
     this.deletedObjs = [];
+    this.groupStore = new Group.GroupStore();
 
     this.terminated = false;
 }
@@ -275,28 +276,28 @@ Board.prototype.getChildObjects = function (entity) {
     return children;
 }
 
-Board.prototype.defineGroup = function (group) {
-    this.instanceGroups[group] = [];
+Board.prototype.defineGroup = function (groupName) {
+    this.groupStore.defineGroup(groupName);
 }
 
-Board.prototype.isGroupDefined = function (group) {
-    return this.instanceGroups[group] != null;
+Board.prototype.isGroupDefined = function (groupName) {
+    return this.groupStore.isGroupDefined(groupName);
 }
 
-Board.prototype.addObjectToGroup = function (group, entity) {
-    if (!this.instanceGroups[group] || this.instanceGroups[group].indexOf(entity) >= 0)
+Board.prototype.addObjectToGroup = function (groupName, entity) {
+    if (!this.groupStore.isGroupDefined(groupName))
         return;
 
-    this.instanceGroups[group].push(entity);
-    entity.groups.push(group);
+    this.groupStore.getGroup(groupName).addEntity(entity);
+    entity.groups.push(groupName);
 }
 
-Board.prototype.removeObjectFromGroup = function (group, entity) {
-    if (!this.instanceGroups[group] || this.instanceGroups[group].indexOf(entity) === -1)
+Board.prototype.removeObjectFromGroup = function (groupName, entity) {
+    if (!this.groupStore.isGroupDefined(groupName))
         return;
 
-    this.instanceGroups[group].splice(this.instanceGroups[group].indexOf(entity), 1);
-    entity.groups.splice(entity.groups.indexOf(group), 1);
+    this.groupStore.getGroup(groupName).removeEntity(entity);
+    entity.groups.splice(entity.groups.indexOf(groupName), 1);
 }
 
 Board.prototype.removeObjectFromAllGroups = function (entity) {
@@ -305,8 +306,11 @@ Board.prototype.removeObjectFromAllGroups = function (entity) {
     }
 }
 
-Board.prototype.getObjectsInGroup = function (group) {
-    return this.instanceGroups[group] || null;
+Board.prototype.getObjectsInGroup = function (groupName) {
+    if (!this.groupStore.isGroupDefined(groupName))
+        return null;
+
+    return this.groupStore.getGroup(groupName).getEntities();
 }
 
 Board.prototype.terminate = function () {
