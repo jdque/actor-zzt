@@ -1,5 +1,4 @@
-var PIXI = require('../../lib/pixi.dev.js');
-var ZZT = require('../zzt.js');
+var PIXI = require('pixi');
 
 function Tile(attrs) {
     this.fg = attrs.fg || 0x000000;
@@ -230,12 +229,10 @@ var PIXICommandSet = {
     defaultName: 'pixi'
 };
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        Tile: Tile,
-        TilePalette: TilePalette,
-        TileSprite: TileSprite,
-        TextureCache: TextureCache,
-        PIXICommandSet: PIXICommandSet
-    };
-}
+module.exports = {
+    Tile: Tile,
+    TilePalette: TilePalette,
+    TileSprite: TileSprite,
+    TextureCache: TextureCache,
+    PIXICommandSet: PIXICommandSet
+};

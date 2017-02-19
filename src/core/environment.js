@@ -338,9 +338,7 @@ World.prototype.step = function () {
     this.activeBoard.step();
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        World: World,
-        Board: Board
-    };
-}
+module.exports = {
+    World: World,
+    Board: Board
+};

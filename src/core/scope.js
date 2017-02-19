@@ -94,6 +94,4 @@ Scope.prototype.evaluate = function (entity) {
     return this.scopeFunc(entity, this.children, this.parent, this.siblings, this.name, this.board) || [];
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = Scope;
-}
+module.exports = Scope;

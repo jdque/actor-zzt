@@ -1,9 +1,9 @@
-var ZZT = require('../zzt.js');
+var Evaluables = require('../core/evaluables.js');
 
 function parseCommands(parser) { return {
     key_down: function (keyCode) {
-        return new ZZT.DeferredFunction(function (entity) {
-            var _keyCode = keyCode instanceof ZZT.Evaluable ? keyCode.evaluate() : keyCode;
+        return new Evaluables.DeferredFunction(function (entity) {
+            var _keyCode = keyCode instanceof Evaluables.Evaluable ? keyCode.evaluate() : keyCode;
             return entity.input.downKeys.indexOf(_keyCode) !== -1;
         });
     }
@@ -49,8 +49,6 @@ var InputCommandSet = {
     defaultName: 'input'
 };
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        InputCommandSet: InputCommandSet
-    };
-}
+module.exports = {
+    InputCommandSet: InputCommandSet
+};

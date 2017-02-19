@@ -177,6 +177,4 @@ Executor.prototype.execLoopOp = function (op) {
     }
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = Executor;
-}
+module.exports = Executor;

@@ -60,14 +60,12 @@ var LoopOp = {
     }
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        Type: Type,
-        SimpleOp: SimpleOp,
-        EnterOp: EnterOp,
-        ExitOp: ExitOp,
-        JumpOp: JumpOp,
-        IfOp: IfOp,
-        LoopOp: LoopOp
-    }
-}
+module.exports = {
+    Type: Type,
+    SimpleOp: SimpleOp,
+    EnterOp: EnterOp,
+    ExitOp: ExitOp,
+    JumpOp: JumpOp,
+    IfOp: IfOp,
+    LoopOp: LoopOp
+};

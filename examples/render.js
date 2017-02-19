@@ -1,9 +1,3 @@
-var PIXI = require('../lib/pixi.dev.js');
-var ZZT = require('../src/zzt.js');
-var Graphics = require('../src/modules/graphics.js');
-var Physics = require('../src/modules/physics.js');
-var Input = require('../src/modules/input.js');
-
 var WIDTH = 640;
 var HEIGHT = 480;
 var stage = new PIXI.Stage(0x000000);
@@ -38,14 +32,14 @@ function onResourcesLoaded() {
     cacheCanvas.width = 1280;
     cacheCanvas.height = 1280;
 
-    var textureCache = new Graphics.TextureCache(cacheCanvas, TILESET);
+    var textureCache = new Char.Graphics.TextureCache(cacheCanvas, TILESET);
 
-    var tilePalette = new Graphics.TilePalette();
-    tilePalette.setEntry(0, new Graphics.Tile({fg: 0x000000, bg: 0x000000, char: 0}));
-    tilePalette.setEntry(1, new Graphics.Tile({fg: 0xFF0000, bg: 0x00FF00, char: 100}));
-    tilePalette.setEntry(2, new Graphics.Tile({fg: 0xFF0000, bg: 0x000000, char: 219}));
-    tilePalette.setEntry(3, new Graphics.Tile({fg: 0x0000FF, bg: 0x000000, char: 219}));
-    tilePalette.setEntry(4, new Graphics.Tile({fg: 0xFFFFFF, bg: 0x000000, char: 7}));
+    var tilePalette = new Char.Graphics.TilePalette();
+    tilePalette.setEntry(0, new Char.Graphics.Tile({fg: 0x000000, bg: 0x000000, char: 0}));
+    tilePalette.setEntry(1, new Char.Graphics.Tile({fg: 0xFF0000, bg: 0x00FF00, char: 100}));
+    tilePalette.setEntry(2, new Char.Graphics.Tile({fg: 0xFF0000, bg: 0x000000, char: 219}));
+    tilePalette.setEntry(3, new Char.Graphics.Tile({fg: 0x0000FF, bg: 0x000000, char: 219}));
+    tilePalette.setEntry(4, new Char.Graphics.Tile({fg: 0xFFFFFF, bg: 0x000000, char: 7}));
 
     var top = new Array(80).fill(1);
     var side = new Array(80).fill(0);
@@ -126,13 +120,13 @@ function onResourcesLoaded() {
         }
     };
 
-    var RenderParser = new ZZT.Parser();
-    RenderParser.registerModule(ZZT.DefaultCommandSet);
-    RenderParser.registerModule(Graphics.PIXICommandSet);
-    RenderParser.registerModule(Physics.PhysicsCommandSet);
-    RenderParser.registerModule(Input.InputCommandSet);
+    var RenderParser = new Char.Parser();
+    RenderParser.registerModule(Char.Default.DefaultCommandSet);
+    RenderParser.registerModule(Char.Graphics.PIXICommandSet);
+    RenderParser.registerModule(Char.Physics.PhysicsCommandSet);
+    RenderParser.registerModule(Char.Input.InputCommandSet);
 
-    var board = new ZZT.Board();
+    var board = new Char.Board();
 
     board.configure({
         autoStep: false,
@@ -239,7 +233,7 @@ function onResourcesLoaded() {
         end()
     });
 
-    world = new ZZT.World();
+    world = new Char.World();
     world.addBoard("Default", board);
     world.startBoard("Default");
 
@@ -252,10 +246,6 @@ function update() {
     requestAnimFrame(update);
 }
 
-var App = {
-    run: run
-};
-
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = App;
+window.onload = function () {
+    run();
 }

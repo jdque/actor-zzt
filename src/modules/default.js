@@ -241,6 +241,6 @@ var DefaultCommandSet = {
     defaultName: ''
 };
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = DefaultCommandSet;
-}
+module.exports = {
+    DefaultCommandSet: DefaultCommandSet
+};

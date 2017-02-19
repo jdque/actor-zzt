@@ -60,12 +60,10 @@ Expression.prototype.evaluate = function (entity) {
     return this.expr.call(entity);
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        Evaluable: Evaluable,
-        DeferredFunction: DeferredFunction,
-        Value: Value,
-        ArrayValue: ArrayValue,
-        Expression: Expression
-    };
-}
+module.exports = {
+    Evaluable: Evaluable,
+    DeferredFunction: DeferredFunction,
+    Value: Value,
+    ArrayValue: ArrayValue,
+    Expression: Expression
+};

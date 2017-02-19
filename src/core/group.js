@@ -45,9 +45,7 @@ Group.prototype.getEntities = function () {
     return this.entities;
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        GroupStore: GroupStore,
-        Group: Group
-    };
-}
+module.exports = {
+    GroupStore: GroupStore,
+    Group: Group
+};

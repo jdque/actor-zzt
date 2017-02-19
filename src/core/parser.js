@@ -162,6 +162,4 @@ Parser.prototype.parse = function (entity) {
     return new Executor(runCommands, this.labelStore, this.blockStore, entity);
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = Parser;
-}
+module.exports = Parser;

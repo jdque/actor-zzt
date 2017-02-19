@@ -39,6 +39,4 @@ var Util = (function () {
     };
 })();
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = Util;
-}
+module.exports = Util;

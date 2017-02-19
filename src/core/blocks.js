@@ -82,11 +82,9 @@ var Label = {
     }
 }
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        LabelStore: LabelStore,
-        BlockStore: BlockStore,
-        Block: Block,
-        Label: Label
-    }
+module.exports = {
+    LabelStore: LabelStore,
+    BlockStore: BlockStore,
+    Block: Block,
+    Label: Label
 }

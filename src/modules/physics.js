@@ -1,5 +1,6 @@
-var PIXI = require('../../lib/pixi.dev.js');
-var ZZT = require('../zzt.js');
+var PIXI = require('pixi');
+var Evaluables = require('../core/evaluables.js');
+var Ops = require('../core/ops.js');
 
 function GridHash(cellSize) {
     this.cellSize = cellSize || 64;
@@ -215,13 +216,13 @@ Spatial.prototype.getAll = function () {
     return this.objects;
 }
 
-Spatial.prototype.getIntersect = function (rect, offsetX, offsetY) {
+Spatial.prototype.getIntersect = function (rect, offsetX, offsetY, excludeObject) {
     rect.x += offsetX || 0;
     rect.y += offsetY || 0;
 
     var objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
     for (var i = objs.length - 1; i >= 0; i--) {
-        if (!this.isIntersect(objs[i].body.bounds, rect)) {
+        if (!this.isIntersect(objs[i].body.bounds, rect) || objs[i] === excludeObject) {
             objs[i] = objs[objs.length - 1];
             objs.pop();
         }
@@ -513,7 +514,7 @@ function getDirectionDelta(dir, entity) {
 
 function parseCommands(parser) { return {
     blocked: function (dir) {
-        return new ZZT.DeferredFunction(function (entity) {
+        return new Evaluables.DeferredFunction(function (entity) {
             var blocked = false;
             var delta = getDirectionDelta(dir, entity);
 
@@ -556,7 +557,7 @@ function parseCommands(parser) { return {
             if (dirs[i].length === 0)
                 continue;
 
-            parser.addOp(ZZT.Ops.SimpleOp.create('body.move', [dirs[i]]));
+            parser.addOp(Ops.SimpleOp.create('body.move', [dirs[i]]));
             parser.commands.wait(5);
         }
     }
@@ -634,11 +635,9 @@ var PhysicsCommandSet = {
     defaultName: 'body'
 };
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        GridHash: GridHash,
-        Spatial: Spatial,
-        TilemapCollider: TilemapCollider,
-        PhysicsCommandSet: PhysicsCommandSet
-    };
-}
+module.exports = {
+    GridHash: GridHash,
+    Spatial: Spatial,
+    TilemapCollider: TilemapCollider,
+    PhysicsCommandSet: PhysicsCommandSet
+};

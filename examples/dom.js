@@ -1,14 +1,11 @@
-var ZZT = require('../src/zzt.js');
-var DOM = require('../src/modules/dom.js');
-
 var board;
 
 function run() {
-    var HTMLParser = new ZZT.Parser();
-    HTMLParser.registerModule(ZZT.DefaultCommandSet);
-    HTMLParser.registerModule(DOM.DOMCommandSet);
+    var HTMLParser = new Char.Parser();
+    HTMLParser.registerModule(Char.Default.DefaultCommandSet);
+    HTMLParser.registerModule(Char.DOM.DOMCommandSet);
 
-    board = new ZZT.Board();
+    board = new Char.Board();
 
     board.configure({
         autoStep: false,
@@ -135,10 +132,6 @@ function update() {
     requestAnimationFrame(update);
 }
 
-var App = {
-    run: run
-};
-
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = App;
+window.onload = function () {
+    run();
 }

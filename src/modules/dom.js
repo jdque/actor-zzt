@@ -1,5 +1,3 @@
-var ZZT = require('../zzt.js');
-
 function parseCommands(parser) { return {
     exec:       parser._defaultParseFunc('html.exec'),
     transition: parser._defaultParseFunc('html.transition')
@@ -46,8 +44,6 @@ var DOMCommandSet = {
     defaultName: 'html'
 };
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = {
-        DOMCommandSet: DOMCommandSet
-    };
-}
+module.exports = {
+    DOMCommandSet: DOMCommandSet
+};
