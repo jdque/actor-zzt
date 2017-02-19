@@ -12,6 +12,9 @@
     "systemjs-builder": "0.15.*",
     "jasmine": "2.3.2"
   },
+  "dependencies": {
+    "pixi": "2.2.9"
+  },
   "author": "",
   "license": "ISC"
 }
