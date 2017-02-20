@@ -10,7 +10,7 @@ Inspired by [ZZT-OOP](https://en.wikipedia.org/wiki/ZZT-oop).
 
 * **Multitasking** - Actor scripts are coroutine-like, and so they can be suspended and resumed at will. Any command can be configured to yield execution of the actor. This makes it easy to program sequential behavior over time.
 
-* **Hierarchal actor structure** - All actors live in a World. A World contains Boards, which are the base containers for actor instances. Actors can create and manage child actors. Actors communicate by sending messages composed of a target (parent, children, siblings, etc), label name (eg. mailbox), and data.
+* **Hierarchical actor structure** - All actors live in a World. A World contains Boards, which are the base containers for actor instances. Actors can create and manage child actors. Actors communicate by sending messages composed of a target (parent, children, siblings, etc), label name (eg. mailbox), and data.
 
 ## Usage
 
