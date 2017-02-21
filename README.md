@@ -12,6 +12,13 @@ Inspired by [ZZT-OOP](https://en.wikipedia.org/wiki/ZZT-oop).
 
 * **Hierarchical actor structure** - All actors live in a World. A World contains Boards, which are the base containers for actor instances. Actors can create and manage child actors. Actors communicate by sending messages composed of a target (parent, children, siblings, etc), label name (eg. mailbox), and data.
 
+## Installation
+
+```
+npm install
+npm run build
+```
+
 ## Usage
 
 ##### Setup
