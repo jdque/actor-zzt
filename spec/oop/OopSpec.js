@@ -1,5 +1,5 @@
 describe("Oop", function () {
-	var ZZT = require("../../src/zzt.js");
+	var ZZT = require("../../tsout/index.js");
 	var board;
 
 	var DefaultParser = new ZZT.Parser();
@@ -121,8 +121,8 @@ describe("Oop", function () {
 				object('Player', function () {
 					jump('do', [1, 2])
 					end()
-					label('do', ['_param1', '_param2'])
-						set('_param1', expr('$_param1 + 1'))
+					label('do', ['param1', 'param2'])
+						set('param1', expr('$_param1 + 1'))
 						print(expr('$_param1 + $_param2'))
 					terminate()
 				});
@@ -139,17 +139,17 @@ describe("Oop", function () {
 
 		it("should spawn objects with initialization variables", function (done) {
 			board.setup(function () {
-				object('Player', ['_param'], function () {
+				object('Player', ['param'], function () {
 					_if('$_param === 1')
 						_if('$_param === 1')
-							print($('_param'))
+							print($('param'))
 						_endif()
 					_endif()
 					spawn('Child', [2, 3])
 					end()
 				});
 
-				object('Child', ['_param1', '_param2'], function () {
+				object('Child', ['param1', 'param2'], function () {
 					print(expr('$_param1'))
 					print(expr('$_param2'))
 					terminate()
@@ -546,16 +546,16 @@ describe("Oop", function () {
 				object('Player', function () {
 					jump('do', ['a'])
 					end()
-					label('do', ['_param'])
-						print($('_param'))
+					label('do', ['param'])
+						print($('param'))
 						send('Other', 'otherdo', [expr('1 + 1')])
 					end()
 				});
 
 				object('Other', function () {
 					end()
-					label('otherdo', ['_param'])
-						print($('_param'))
+					label('otherdo', ['param'])
+						print($('param'))
 					terminate()
 				});
 			});
@@ -603,6 +603,50 @@ describe("Oop", function () {
 			});
 			board.run(function () {
 				spawn('Parent')
+			});
+			board.finish(function () {
+				expect(console.history.toString()).toEqual(['A', 'B'].toString())
+				done();
+			});
+			board.start();
+		});
+
+		it("should spawn nested (child) entities using tree builder command", function (done) {
+			board.setup(function () {
+				object('Parent', function () {
+					send('[self].Child', 'do')
+					end()
+					label('done')
+						print('B')
+					terminate()
+				});
+				object('Child', function () {
+					end()
+					label('do')
+						send('[self].Zygote', 'do2')
+					end()
+				});
+				object('Zygote', function () {
+					end()
+					label('do2')
+						send('[self].Zygote', 'do3')
+					end()
+					label('do3')
+						print('A')
+						send('[parent].[parent].[parent]', 'done')
+					end()
+				});
+			});
+			board.run(function () {
+				spawn_tree(
+					['Parent', [], [
+						['Child', [], [
+							['Zygote', [], [
+								['Zygote', [], []]
+							]]
+						]]
+					]]
+				);
 			});
 			board.finish(function () {
 				expect(console.history.toString()).toEqual(['A', 'B'].toString())
