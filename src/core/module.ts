@@ -1,24 +1,25 @@
 import {Parser} from './parser';
 import {Entity} from './environment';
 
-export type CommandMap = {[name: string]: Function};
+interface CompileFunc { (parser: Parser): Function };
+interface RunFunc { (entity: Entity) : Function };
 
 export interface ICommand {
     name: string;
-    compile(parser: Parser): Function;
-    run(entity: Entity): Function;
+    compile: CompileFunc;
+    run: RunFunc;
 }
 
 export interface IModule {
     name: string;
-    compileCommands: CommandMap;
-    runCommands: CommandMap;
+    compileCommands: {[name: string]: CompileFunc};
+    runCommands: {[name: string]: RunFunc};
 }
 
 export class Module implements IModule {
     name: string;
-    compileCommands: CommandMap;
-    runCommands: CommandMap;
+    compileCommands: {[name: string]: CompileFunc};
+    runCommands: {[name: string]: RunFunc};
 
     constructor(name: string, commands: ICommand[]) {
         this.name = name;

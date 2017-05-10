@@ -5,6 +5,7 @@ import {Executor} from './executor';
 import {Entity} from './environment';
 import {IModule} from './module';
 
+type CommandMap = {[name: string]: Function};
 export type CommandTree = {[name: string]: CommandTree} | Function;
 
 interface ICursor {
@@ -15,13 +16,13 @@ interface ICursor {
 };
 
 export class Parser {
-    commands: CommandTree;
-    modules: IModule[];
-    labelStore: LabelStore;
-    blockStore: BlockStore;
-    currentBlock: TBlock;
-    blockStack: TBlock[];
-    cursor: ICursor;
+    public commands: CommandTree;
+    public labelStore: LabelStore;
+    public blockStore: BlockStore;
+    public cursor: ICursor;
+    private modules: IModule[];
+    private currentBlock: TBlock;
+    private blockStack: TBlock[];
 
     constructor() {
         this.commands = {};
@@ -38,7 +39,7 @@ export class Parser {
         };
     }
 
-    reset(): void {
+    private reset(): void {
         this.labelStore = new LabelStore();
         this.blockStore = new BlockStore();
 
@@ -48,50 +49,14 @@ export class Parser {
         this.resetCursor();
     }
 
-    registerModule(module: IModule, customName: string): void {
-        let name = module.name;
-        if (customName) {
-            name = customName;
-            module.name = customName;
-        }
-
-        for (let module of this.modules) {
-            if (module.name === name) {
-                return;
-            }
-        }
-        this.modules.push(module);
-
-        let compileCommands = {};
-        for (let name in module.compileCommands) {
-            compileCommands[name] = module.compileCommands[name](this);
-        }
-
-        if (name.length > 0) {
-            this.commands[name] = {};
-            Util.extend(this.commands[name], compileCommands);
-        } else {
-            Util.extend(this.commands, compileCommands);
-        }
-
-    }
-
-    registerBlock(block: TBlock): void {
-        this.blockStore.add(block);
-    }
-
-    registerLabel(label: TLabel): void {
-        this.labelStore.add(label);
-    }
-
-    resetCursor(): void {
+    private resetCursor(): void {
         this.cursor.blockId = null;
         this.cursor.offset = null;
         this.cursor.prevOp = null;
         this.cursor.lastOp = null;
     }
 
-    updateCursor(block: TBlock): void {
+    private updateCursor(block: TBlock): void {
         if (!block) {
             this.resetCursor();
             return;
@@ -103,11 +68,7 @@ export class Parser {
         this.cursor.lastOp = block[2][block[2].length - 1] || null;
     }
 
-    hasActiveBlock(): boolean {
-        return this.currentBlock != null;
-    }
-
-    setCurrentBlock(blockId: string): void {
+    private setCurrentBlock(blockId: string): void {
         let block = this.blockStore.get(blockId);
         if (!block) {
             throw new Error("Unregistered block");
@@ -122,14 +83,18 @@ export class Parser {
         this.updateCursor(this.currentBlock);
     }
 
-    exitCurrentBlock(): void {
+    private exitCurrentBlock(): void {
         this.blockStack.pop();
         this.currentBlock = this.blockStack[this.blockStack.length - 1];
         this.updateCursor(this.currentBlock);
     }
 
+    hasActiveBlock(): boolean {
+        return this.currentBlock != null;
+    }
+
     enter(block: TBlock): Parser {
-        this.registerBlock(block);
+        this.blockStore.add(block);
         this.setCurrentBlock(block[0]);
         return this;
     }
@@ -145,6 +110,31 @@ export class Parser {
         return this;
     }
 
+    registerModule(module: IModule, customNamespace?: string): void {
+        let namespace = customNamespace ? customNamespace : module.name;
+
+        for (let module of this.modules) {
+            if (module.name === namespace) {
+                return;
+            }
+        }
+        this.modules.push(module);
+
+        let compileCommands: CommandMap = {};
+        for (let cmdName in module.compileCommands) {
+            compileCommands[cmdName] = module.compileCommands[cmdName](this);
+        }
+
+        if (namespace.length > 0) {
+            if (!(namespace in this.commands)) {
+                this.commands[namespace] = {};
+            }
+            Util.extend(this.commands[namespace], compileCommands);
+        } else {
+            Util.extend(this.commands, compileCommands);
+        }
+    }
+
     simpleCommand(commandName: string): Function {
         let self = this;
 
@@ -158,7 +148,7 @@ export class Parser {
         this.reset();
 
         //TODO - preserve namespaces as in compileCommands
-        let runCommands = {};
+        let runCommands: CommandMap = {};
         for (let module of this.modules) {
             for (let cmdName of Object.keys(module.runCommands)) {
                 runCommands[cmdName] = module.runCommands[cmdName](entity);

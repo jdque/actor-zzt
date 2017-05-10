@@ -10,7 +10,7 @@ export enum Type {
     LOOP_OP
 };
 
-export type TBlock       = [string, any[], any[]];
+export type TBlock       = [string, any[], TAnyOp[]];
 export type TLabel       = [string, any[], string, number];
 export type TSimpleOp    = [Type.SIMPLE_OP, string, any[]];
 export type TEnterOp     = [Type.ENTER_OP, string];
