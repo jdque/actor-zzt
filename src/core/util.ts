@@ -1,4 +1,4 @@
-Function.prototype.fastBind = function (context) {
+/*Function.prototype.fastBind = function (context) {
     var self = this;
     var curriedArgs = Array.prototype.slice.call(arguments, 1);
     if (curriedArgs.length) {
@@ -15,28 +15,23 @@ Function.prototype.fastBind = function (context) {
             self.apply(context)
         }
     }
-}
+}*/
 
-var Util = (function () {
-    var currentId = 0;
+type ObjLiteral = {[key: string]: any};
 
-    function generateId() {
-        return currentId++;
+export class Util {
+    static currentId: number = 0;
+
+    static generateId(): number {
+        return Util.currentId++;
     }
 
-    function extend(destination, source) {
-        for (var k in source) {
+    static extend(destination: ObjLiteral, source: ObjLiteral): ObjLiteral {
+        for (let k in source) {
             if (source.hasOwnProperty(k)) {
                 destination[k] = source[k];
             }
         }
         return destination;
     }
-
-    return {
-        generateId: generateId,
-        extend: extend
-    };
-})();
-
-module.exports = Util;
+}
