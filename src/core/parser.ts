@@ -145,7 +145,7 @@ export class Parser {
         return this;
     }
 
-    _defaultParseFunc(commandName: string): Function {
+    simpleCommand(commandName: string): Function {
         let self = this;
 
         return function () {

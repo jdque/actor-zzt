@@ -186,7 +186,7 @@ builder
     })
     .command({
         name: 'adopt',
-        compile: (parser) => parser._defaultParseFunc('adopt'),
+        compile: (parser) => parser.simpleCommand('adopt'),
         run: (entity) => (moduleName: string, initParams: {[key: string]: any}) => {
             var commandSet = entity.executor.commands[moduleName];
             entity.adoptions.push(commandSet);
@@ -203,21 +203,21 @@ builder
     })
     .command({
         name: 'join',
-        compile: (parser) => parser._defaultParseFunc('join'),
+        compile: (parser) => parser.simpleCommand('join'),
         run: (entity) => (groupName: string) => {
             entity.board.addObjectToGroup(groupName, entity);
         }
     })
     .command({
         name: 'leave',
-        compile: (parser) => parser._defaultParseFunc('leave'),
+        compile: (parser) => parser.simpleCommand('leave'),
         run: (entity) => (groupName: string) => {
             entity.board.removeObjectFromGroup(groupName, entity);
         }
     })
     .command({
         name: 'set',
-        compile: (parser) => parser._defaultParseFunc('set'),
+        compile: (parser) => parser.simpleCommand('set'),
         run: (entity) => (varName: string, value: any) => {
             if (varName in entity.executor.currentLabelFrame.variables) {
                 entity.executor.currentLabelFrame.variables[varName] = value;
@@ -236,7 +236,7 @@ builder
     })
     .command({
         name: 'terminate',
-        compile: (parser) => parser._defaultParseFunc('terminate'),
+        compile: (parser) => parser.simpleCommand('terminate'),
         run: (entity) => () => {
             entity.ended = true;
             entity.board.terminate();
@@ -244,7 +244,7 @@ builder
     })
     .command({
         name: 'print',
-        compile: (parser) => parser._defaultParseFunc('print'),
+        compile: (parser) => parser.simpleCommand('print'),
         run: (entity) => (text: any) => {
             console.log(text);
             entity.cycleEnded = true;
@@ -252,42 +252,42 @@ builder
     })
     .command({
         name: 'lock',
-        compile: (parser) => parser._defaultParseFunc('lock'),
+        compile: (parser) => parser.simpleCommand('lock'),
         run: (entity) => () => {
             entity.locked = true;
         }
     })
     .command({
         name: 'unlock',
-        compile: (parser) => parser._defaultParseFunc('unlock'),
+        compile: (parser) => parser.simpleCommand('unlock'),
         run: (entity) => () => {
             entity.locked = false;
         }
     })
     .command({
         name: 'zap',
-        compile: (parser) => parser._defaultParseFunc('zap'),
+        compile: (parser) => parser.simpleCommand('zap'),
         run: (entity) => (labelName: string) => {
             entity.executor.labelStore.disableCurrent(labelName);
         }
     })
     .command({
         name: 'restore',
-        compile: (parser) => parser._defaultParseFunc('restore'),
+        compile: (parser) => parser.simpleCommand('restore'),
         run: (entity) => (labelName: string) => {
             entity.executor.labelStore.enablePrevious(labelName);
         }
     })
     .command({
         name: 'spawn',
-        compile: (parser) => parser._defaultParseFunc('spawn'),
+        compile: (parser) => parser.simpleCommand('spawn'),
         run: (entity) => (objName: string, initArgs: any[]) => {
             entity.board.spawnObject(objName, entity, initArgs);
         }
     })
     .command({
         name: 'spawn_tree',
-        compile: (parser) => parser._defaultParseFunc('spawn_tree'),
+        compile: (parser) => parser.simpleCommand('spawn_tree'),
         run: (entity) => (...args: SpawnNode[]) => {
             let spawn = (node: SpawnNode, parent: Entity) => {
                 let newEntity = entity.board.spawnObject(node[0], parent, node[1]);
@@ -302,14 +302,14 @@ builder
     })
     .command({
         name: 'die',
-        compile: (parser) => parser._defaultParseFunc('die'),
+        compile: (parser) => parser.simpleCommand('die'),
         run: (entity) => () => {
             entity.board.removeObject(entity, true);
         }
     })
     .command({
         name: 'become',
-        compile: (parser) => parser._defaultParseFunc('become'),
+        compile: (parser) => parser.simpleCommand('become'),
         run: (entity) => (objName: string, initArgs: any[]) => {
             entity.ended = true;
             entity.cycleEnded = true;
@@ -319,7 +319,7 @@ builder
     })
     .command({
         name: 'exec',
-        compile: (parser) => parser._defaultParseFunc('exec'),
+        compile: (parser) => parser.simpleCommand('exec'),
         run: (entity) => (func: Function) => {
             func(entity);
         }
