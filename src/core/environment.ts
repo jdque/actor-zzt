@@ -5,12 +5,15 @@ import {TJumpOp, JumpOp} from'./ops';
 import {Group, GroupStore} from './group';
 import {CommandTree, Parser} from './parser';
 import {IExecutionContext, IExecutionState, StepResult, Executor} from './executor';
+import {IModule} from './module';
 
 type InstanceMap = {[name: string]: Entity[]};
 
 interface IBoardConfig {
-    autoStep: boolean;
-    parser: Parser;
+    executor: {
+        autoStep: boolean;
+    };
+    parser: { modules: Array<{module: IModule, namespace: string}> } | Parser;
 };
 
 export class Entity {
@@ -172,8 +175,18 @@ export class Board extends Entity {
     }
 
     configure(config: IBoardConfig): Board {
-        this.autoStep = config.autoStep || false;
-        this.parser = config.parser || new Parser();
+        if (config.parser instanceof Parser) {
+            this.parser = config.parser;
+        } else {
+            this.parser = new Parser();
+            let modules = config.parser && config.parser.modules instanceof Array ? config.parser.modules : [];
+            for (let module of modules) {
+                this.parser.registerModule(module.module, module.namespace);
+            }
+        }
+
+        this.autoStep = config.executor && config.executor.autoStep ? true : false;
+
         return this;
     }
 

@@ -20,7 +20,9 @@ describe("Oop", function () {
 		console.history = [];
 		board = new ZZT.Board();
 		board.configure({
-			autoStep: true,
+			executor: {
+				autoStep: true
+			},
 			parser: DefaultParser
 		});
 	});
