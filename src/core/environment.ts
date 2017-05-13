@@ -1,10 +1,10 @@
 import {Util} from './util';
 import {Scope} from './evaluables';
-import {BlockStore, LabelStore} from './blocks';
+import {BlockStore, LabelStore, LabelOffsets} from './blocks';
 import {TJumpOp, JumpOp} from'./ops';
 import {Group, GroupStore} from './group';
 import {CommandTree, Parser} from './parser';
-import {Executor} from './executor';
+import {IExecutionContext, IExecutionState, StepResult, Executor} from './executor';
 
 type InstanceMap = {[name: string]: Entity[]};
 
@@ -32,6 +32,8 @@ export class Entity {
     pendingJumpOp: TJumpOp;
     //execution
     executor: Executor;
+    execContext: IExecutionContext;
+    execState: IExecutionState;
 
     constructor(board: Board, name: string, script: Function, initParams: string[] = []) {
         this.id = Util.generateId().toString();
@@ -48,7 +50,8 @@ export class Entity {
         this.cycleEnded = false;
         this.locked = false;
         this.pendingJumpOp = null;
-        this.executor = null;
+        this.execContext = null;
+        this.execState = null;
     }
 
     static clone(entity: Entity): Entity {
@@ -56,12 +59,11 @@ export class Entity {
     }
 
     begin(initArgs: any[]): void {
-        this.cycleEnded = false;
         this.gotoLabel('init', initArgs);
     }
 
     gotoLabel(labelName: string, args: any[]): void {
-        if (this.locked || !this.executor.labelStore.hasEnabled(labelName)) {
+        if (this.locked || !this.execState.labelOffsets.hasEnabled(labelName)) {
             return;
         }
 
@@ -79,19 +81,34 @@ export class Entity {
 
         //TODO - needed in case an object sends a message to itself. Figure out a better way to do this?
         if (this.pendingJumpOp) {
-            this.executor.execJumpOp(this.pendingJumpOp);
+            this.board.executor.execOp(this.pendingJumpOp, this.execContext, this.execState);
             this.pendingJumpOp = null;
         }
 
-        while (this.executor.step()) {
+        while (this.board.executor.step(this.execContext, this.execState) === StepResult.CONTINUE) {
             if (this.cycleEnded || this.ended) {
                 break;
             }
             if (this.pendingJumpOp) {
-                this.executor.execJumpOp(this.pendingJumpOp);
+                this.board.executor.execOp(this.pendingJumpOp, this.execContext, this.execState);
                 this.pendingJumpOp = null;
             }
         }
+    }
+
+    clearFrameStack(): void {
+        this.execState.currentLabelFrame = null;
+        this.execState.currentFrame = null;
+        this.execState.frameStack = [];
+    }
+
+    initExecState(): void {
+        this.execState = {
+            currentLabelFrame: null,
+            currentFrame: null,
+            frameStack: [],
+            labelOffsets: new LabelOffsets(this.execContext.labelStore)
+        };
     }
 
     destroyAdoptions(): void {
@@ -107,9 +124,10 @@ export class Board extends Entity {
     setupFunc: Function;
     finishFunc: Function;
     runScript: Function;
-    objects: {[name: string]: Entity};
+    prototypes: {[name: string]: Entity};
     autoStep: boolean;
     parser: Parser;
+    executor: Executor;
 
     //Execution
     instances: InstanceMap[];
@@ -124,9 +142,10 @@ export class Board extends Entity {
         this.setupFunc = function () {};
         this.finishFunc = function () {};
         this.runScript = function () {};
-        this.objects = {};
+        this.prototypes = {};
         this.autoStep = false;
         this.parser = null;
+        this.executor = new Executor();
         this.instances = [{}];
         this.spawnedObjs = [];
         this.deletedObjs = [];
@@ -170,7 +189,8 @@ export class Board extends Entity {
         this.script = this.runScript;
         this.depth = 0;
         this.parent = null;
-        this.executor = this.parser.parse(this);
+        this.execContext = this.parser.parse(this);
+        this.initExecState();
         this.begin([]);
         this.instances[0]["_board"] = [];
         this.instances[0]["_board"].push(this);
@@ -219,7 +239,7 @@ export class Board extends Entity {
     }
 
     defineObject(name: string, initParamsOrScript: string[] | Function, script?: Function): Entity {
-        if (this.objects[name]) {
+        if (this.prototypes[name]) {
             throw "Duplicate object definition";
         }
 
@@ -234,17 +254,25 @@ export class Board extends Entity {
             throw "Bad object definition";
         }
 
-        this.objects[name] = obj;
+        let [labelStore, blockStore] = this.parser.parseStores(obj);
+        obj.execContext = {
+            entity: obj,
+            commands: {},
+            labelStore: labelStore,
+            blockStore: blockStore
+        }
+
+        this.prototypes[name] = obj;
 
         return obj;
     }
 
     isObjectDefined(name: string): boolean {
-        return this.objects[name] != null;
+        return this.prototypes[name] != null;
     }
 
     spawnObject(name: string, parent: Entity, initArgs: any[]): Entity {
-        if (!this.objects[name])
+        if (!this.prototypes[name])
             return;
 
         if (parent) {
@@ -252,15 +280,22 @@ export class Board extends Entity {
                 this.instances.push({});
         }
 
-        let obj = Entity.clone(this.objects[name]);
-        obj.depth = parent ? parent.depth + 1 : 0;
-        obj.parent = parent || obj;
-        obj.executor = this.parser.parse(obj);
-        obj.begin(initArgs);
+        let prototype = this.prototypes[name];
+        let instance = Entity.clone(prototype);
+        instance.depth = parent ? parent.depth + 1 : 0;
+        instance.parent = parent || instance;
+        instance.execContext = {
+            entity: instance,
+            commands: this.parser.parseCommands(instance),
+            labelStore: prototype.execContext.labelStore,
+            blockStore: prototype.execContext.blockStore
+        };
+        instance.initExecState();
+        instance.begin(initArgs);
 
-        this.spawnedObjs.push(obj);
+        this.spawnedObjs.push(instance);
 
-        return obj;
+        return instance;
     }
 
     removeObject(entity: Entity, recursive?: boolean): void {
@@ -280,7 +315,7 @@ export class Board extends Entity {
     }
 
     replaceObject(target: Entity, newName: string, initArgs: any[]): void {
-        let newObject = this.spawnObject(this.objects[newName].name, target.parent, initArgs);
+        let newObject = this.spawnObject(this.prototypes[newName].name, target.parent, initArgs);
         for (let child of this.getChildObjects(target)) {
             child.parent = newObject;
         }

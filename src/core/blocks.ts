@@ -29,11 +29,9 @@ export class BlockStore implements IStore<string, TBlock> {
 
 export class LabelStore implements IStore<string, TLabel> {
     labels: {[labelName: string]: TLabel[]};
-    offsets: {[labelName: string]: number};
 
     constructor() {
         this.labels = {};
-        this.offsets = {};
     }
 
     add(label: TLabel): void {
@@ -42,28 +40,51 @@ export class LabelStore implements IStore<string, TLabel> {
             this.labels[name].push(label);
         } else {
             this.labels[name] = [label];
-            this.offsets[name] = 0;
         }
     }
 
     clear(labelName: string): void {
         delete this.labels[labelName];
-        delete this.offsets[labelName];
     }
 
-    get(labelName: string): TLabel {
-        if (!this.hasEnabled(labelName)) {
+    get(labelName: string, offset?: number): TLabel {
+        if (!this.labels[labelName]) {
             return null;
         }
+        return this.labels[labelName][offset || 0];
+    }
 
-        return this.labels[labelName][this.offsets[labelName]];
+    getLabelCount(labelName: string): number {
+        return this.labels[labelName].length;
+    }
+
+    getLabelNames(): string[] {
+        return Object.keys(this.labels);
+    }
+}
+
+export class LabelOffsets {
+    offsets: {[labelName: string]: [number, number]};
+
+    constructor(labelStore: LabelStore) {
+        this.offsets = {};
+        for (let name of labelStore.getLabelNames()) {
+            this.offsets[name] = [0, labelStore.getLabelCount(name)];
+        }
+    }
+
+    getOffset(labelName: string): number {
+        if (!this.offsets[labelName]) {
+            return 0;
+        }
+        return this.offsets[labelName][0];
     }
 
     hasEnabled(labelName: string): boolean {
-        if (!this.labels[labelName]) {
+        if (!this.offsets[labelName]) {
             return false;
         }
-        if (this.offsets[labelName] >= this.labels[labelName].length) {
+        if (this.offsets[labelName][0] >= this.offsets[labelName][1]) {
             return false;
         }
 
@@ -75,14 +96,14 @@ export class LabelStore implements IStore<string, TLabel> {
             return;
         }
 
-        this.offsets[labelName] += 1;
+        this.offsets[labelName][0] += 1;
     }
 
     enablePrevious(labelName: string): void {
-        if (!this.labels[labelName] || this.offsets[labelName] === 0) {
+        if (!this.offsets[labelName] || this.offsets[labelName][0] === 0) {
             return;
         }
 
-        this.offsets[labelName] -= 1;
+        this.offsets[labelName][0] -= 1;
     }
 }

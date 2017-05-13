@@ -28,8 +28,8 @@ export class Value implements IEvaluable<any> {
     }
 
     evaluate(entity: Entity): any {
-        if (this.varName in entity.executor.currentLabelFrame.variables) {
-            return entity.executor.currentLabelFrame.variables[this.varName];
+        if (this.varName in entity.execState.currentLabelFrame.variables) {
+            return entity.execState.currentLabelFrame.variables[this.varName];
         } else {
             return entity.variables[this.varName];
         }
@@ -47,8 +47,8 @@ export class ArrayValue implements IEvaluable<any[]> {
         let values: any[] = new Array(this.varNames.length);
 
         for (let varName of this.varNames) {
-            if (varName in entity.executor.currentLabelFrame.variables) {
-                return entity.executor.currentLabelFrame.variables[varName];
+            if (varName in entity.execState.currentLabelFrame.variables) {
+                return entity.execState.currentLabelFrame.variables[varName];
             } else {
                 return entity.variables[varName];
             }
@@ -64,7 +64,7 @@ export class Expression implements IEvaluable<any> {
     constructor(expr: string) {
         this.expr = new Function(
             'return ' +
-            expr.replace(/\$\_/g, 'this.executor.currentLabelFrame.variables.')
+            expr.replace(/\$\_/g, 'this.execState.currentLabelFrame.variables.')
                 .replace(/\$/g, 'this.variables.')
         );
     }

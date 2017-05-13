@@ -1,7 +1,7 @@
 import {Util} from './util';
 import {LabelStore, BlockStore} from './blocks';
 import {TBlock, TLabel, TAnyOp, SimpleOp} from './ops';
-import {Executor} from './executor';
+import {IExecutionContext} from './executor';
 import {Entity} from './environment';
 import {IModule} from './module';
 
@@ -15,14 +15,22 @@ interface ICursor {
     lastOp: TAnyOp
 };
 
-export class Parser {
+interface IParseState {
+    labelStore: LabelStore;
+    blockStore: BlockStore;
+    cursor: ICursor;
+    currentBlock: TBlock;
+    blockStack: TBlock[];
+}
+
+export class Parser implements IParseState {
     public commands: CommandTree;
+    private modules: IModule[];
     public labelStore: LabelStore;
     public blockStore: BlockStore;
+    public currentBlock: TBlock;
+    public blockStack: TBlock[];
     public cursor: ICursor;
-    private modules: IModule[];
-    private currentBlock: TBlock;
-    private blockStack: TBlock[];
 
     constructor() {
         this.commands = {};
@@ -39,13 +47,11 @@ export class Parser {
         };
     }
 
-    private reset(): void {
+    private resetState(): void {
         this.labelStore = new LabelStore();
         this.blockStore = new BlockStore();
-
         this.currentBlock = null;
         this.blockStack = [];
-
         this.resetCursor();
     }
 
@@ -144,16 +150,8 @@ export class Parser {
         };
     }
 
-    parse(entity: Entity): Executor {
-        this.reset();
-
-        //TODO - preserve namespaces as in compileCommands
-        let runCommands: CommandMap = {};
-        for (let module of this.modules) {
-            for (let cmdName of Object.keys(module.runCommands)) {
-                runCommands[cmdName] = module.runCommands[cmdName](entity);
-            }
-        }
+    parseStores(entity: Entity): [LabelStore, BlockStore] {
+        this.resetState();
 
         let paramsStr = '["' + entity.initParams.join('","') + '"]';
         let commandKeys = Object.keys(this.commands);
@@ -165,6 +163,30 @@ export class Parser {
             'end();'
         )).apply(this, commandVals);
 
-        return new Executor(runCommands, this.labelStore, this.blockStore, entity);
+        return [this.labelStore, this.blockStore];
+    }
+
+    parseCommands(entity: Entity): CommandMap {
+        //TODO - preserve namespaces as in compileCommands
+        let runCommands: CommandMap = {};
+        for (let module of this.modules) {
+            for (let cmdName of Object.keys(module.runCommands)) {
+                runCommands[cmdName] = module.runCommands[cmdName](entity);
+            }
+        }
+
+        return runCommands;
+    }
+
+    parse(entity: Entity): IExecutionContext {
+        let runCommands: CommandMap = this.parseCommands(entity);
+        let [labelStore, blockStore] = this.parseStores(entity);
+
+        return {
+            entity: entity,
+            commands: runCommands,
+            labelStore: labelStore,
+            blockStore: blockStore
+        };
     }
 }

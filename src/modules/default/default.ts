@@ -69,7 +69,7 @@ builder
         },
         run: (entity) => () => {
             entity.ended = true;
-            entity.executor.clearFrameStack();
+            entity.clearFrameStack();
         }
     })
     .command({
@@ -188,7 +188,7 @@ builder
         name: 'adopt',
         compile: (parser) => parser.simpleCommand('adopt'),
         run: (entity) => (moduleName: string, initParams: {[key: string]: any}) => {
-            var commandSet = entity.executor.commands[moduleName];
+            var commandSet = entity.execContext.commands[moduleName];
             entity.adoptions.push(commandSet);
 
             var evaulatedParams = {};
@@ -220,8 +220,8 @@ builder
         name: 'set',
         compile: (parser) => parser.simpleCommand('set'),
         run: (entity) => (varName: string, value: any) => {
-            if (varName in entity.executor.currentLabelFrame.variables) {
-                entity.executor.currentLabelFrame.variables[varName] = value;
+            if (varName in entity.execState.currentLabelFrame.variables) {
+                entity.execState.currentLabelFrame.variables[varName] = value;
             } else {
                 entity.variables[varName] = value;
             }
@@ -261,14 +261,14 @@ builder
         name: 'zap',
         compile: (parser) => parser.simpleCommand('zap'),
         run: (entity) => (labelName: string) => {
-            entity.executor.labelStore.disableCurrent(labelName);
+            entity.execState.labelOffsets.disableCurrent(labelName);
         }
     })
     .command({
         name: 'restore',
         compile: (parser) => parser.simpleCommand('restore'),
         run: (entity) => (labelName: string) => {
-            entity.executor.labelStore.enablePrevious(labelName);
+            entity.execState.labelOffsets.enablePrevious(labelName);
         }
     })
     .command({

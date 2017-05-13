@@ -1,7 +1,7 @@
 import {Util} from './util';
 import {Expression} from './evaluables';
 
-export enum Type {
+export const enum Type {
     SIMPLE_OP,
     ENTER_OP,
     EXIT_OP,
