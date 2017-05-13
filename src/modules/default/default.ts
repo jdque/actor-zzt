@@ -163,16 +163,16 @@ builder
         name: 'send',
         compile: (parser) => (scope: string | Scope, label: string, args?: any[]) => {
             var evalScope = typeof scope === 'string' ? new Scope(scope) : scope;
-            parser.addOp(Ops.SimpleOp.create('send', [evalScope, label, args || []]));
+            var op = Ops.SimpleOp.create('send', [evalScope, label, args || []]);
+            parser.addOp(op);
         },
         run: (entity) => (objects: Entity[], label: string, args: any[]) => {
             var evaluatedArgs = [];
-            for (var i = 0; i < args.length; i++) {
-                evaluatedArgs.push(isEvaluable(args[i]) ? args[i].evaluate(entity) : args[i]);
+            for (let arg of args) {
+                evaluatedArgs.push(isEvaluable(arg) ? arg.evaluate(entity) : arg);
             }
-
-            for (var i = 0; i < objects.length; i++) {
-                objects[i].gotoLabel(label, evaluatedArgs);
+            for (let obj of objects) {
+                obj.gotoLabel(label, evaluatedArgs);
             }
         }
     })
@@ -191,14 +191,15 @@ builder
             var commandSet = entity.executor.commands[moduleName];
             entity.adoptions.push(commandSet);
 
+            var evaulatedParams = {};
             if (typeof initParams === 'object') {
-                Object.keys(initParams).forEach(function (key) {
+                for (let key of Object.keys(initParams)) {
                     var initVal = initParams[key];
-                    initParams[key] = isEvaluable(initVal) ? initVal.evaluate(entity) : initVal;
-                })
+                    evaulatedParams[key] = isEvaluable(initVal) ? initVal.evaluate(entity) : initVal;
+                }
             }
 
-            commandSet.__init__(initParams);
+            commandSet.__init__(evaulatedParams);
         }
     })
     .command({
@@ -221,17 +222,9 @@ builder
         run: (entity) => (varName: string, value: any) => {
             if (varName in entity.executor.currentLabelFrame.variables) {
                 entity.executor.currentLabelFrame.variables[varName] = value;
-            }
-            else {
+            } else {
                 entity.variables[varName] = value;
             }
-            /*var resolvedName = varName.replace('_', '');
-            if (varName.indexOf('_') === 0) {
-                entity.executor.currentLabelFrame.variables[resolvedName] = value;
-            }
-            else {
-                entity.variables[resolvedName] = value;
-            }*/
         }
     })
     .command({

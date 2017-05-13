@@ -155,12 +155,12 @@ export class Parser {
             }
         }
 
-        let varParamsStr = '["' + entity.initVarParams.join('","') + '"]';
+        let paramsStr = '["' + entity.initParams.join('","') + '"]';
         let commandKeys = Object.keys(this.commands);
         let commandVals = commandKeys.map((key) => this.commands[key]);
 
         (new Function(commandKeys.join(','),
-            'label("init", ' + varParamsStr + ');' +
+            'label("init", ' + paramsStr + ');' +
             entity.script.toString().match(/{([\s\S]*)}/)[1] + ";" +
             'end();'
         )).apply(this, commandVals);

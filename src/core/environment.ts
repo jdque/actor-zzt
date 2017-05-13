@@ -19,7 +19,7 @@ export class Entity {
     board: Board;
     name: string;
     script: Function;
-    initVarParams: any[];
+    initParams: string[];
     depth: number;
     parent: Entity;
     //state
@@ -33,12 +33,12 @@ export class Entity {
     //execution
     executor: Executor;
 
-    constructor(board: Board, name: string, script: Function, initVarParams: any[] = []) {
+    constructor(board: Board, name: string, script: Function, initParams: string[] = []) {
         this.id = Util.generateId().toString();
         this.board = board;
         this.name = name;
         this.script = script;
-        this.initVarParams = initVarParams;
+        this.initParams = initParams;
         this.depth = 0;
         this.parent = null;
         this.variables = {};
@@ -52,7 +52,7 @@ export class Entity {
     }
 
     static clone(entity: Entity): Entity {
-        return new Entity(entity.board, entity.name, entity.script, entity.initVarParams);
+        return new Entity(entity.board, entity.name, entity.script, entity.initParams);
     }
 
     begin(initArgs: any[]): void {
@@ -218,17 +218,17 @@ export class Board extends Entity {
         }
     }
 
-    defineObject(name: string, varParamsOrScript: any[] | Function, script?: Function): Entity {
+    defineObject(name: string, initParamsOrScript: string[] | Function, script?: Function): Entity {
         if (this.objects[name]) {
             throw "Duplicate object definition";
         }
 
         let obj;
         if (arguments.length === 3) {
-            obj = new Entity(this, name, script, <any[]>varParamsOrScript);
+            obj = new Entity(this, name, script, <string[]>initParamsOrScript);
         }
         else if (arguments.length === 2) {
-            obj = new Entity(this, name, <Function>varParamsOrScript, []);
+            obj = new Entity(this, name, <Function>initParamsOrScript, []);
         }
         else {
             throw "Bad object definition";
