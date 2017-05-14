@@ -11,7 +11,7 @@ builder
     },
     globalName: 'Char',
     globalDeps: {
-        "pixi": "PIXI"
+        "pixi.js": "PIXI"
     },
     minify: false,
     runtime: true,
