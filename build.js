@@ -1,11 +1,11 @@
 var Builder = require('systemjs-builder');
 
-var builder = new Builder('src');
+var builder = new Builder('tsout');
 
 builder
 .buildStatic('index.js', 'bin/char.js', {
     config: {
-        defaultJSExtensions: false,
+        defaultJSExtensions: true,
         packages: {
         }
     },
