@@ -1,5 +1,5 @@
 import {Util} from './util';
-import {Expression} from './evaluables';
+import {IEvaluable} from './evaluables';
 
 export const enum Type {
     SIMPLE_OP,
@@ -16,8 +16,8 @@ export type TSimpleOp    = [Type.SIMPLE_OP, string, any[]];
 export type TEnterOp     = [Type.ENTER_OP, string];
 export type TExitOp      = [Type.EXIT_OP, string];
 export type TJumpOp      = [Type.JUMP_OP, string, any[]];
-export type TIfOp        = [Type.IF_OP, Expression, TEnterExitOp, TEnterExitOp];
-export type TLoopOp      = [Type.LOOP_OP, Expression, TEnterOp];
+export type TIfOp        = [Type.IF_OP, IEvaluable<boolean>, TEnterExitOp, TEnterExitOp];
+export type TLoopOp      = [Type.LOOP_OP, IEvaluable<number>, TEnterOp];
 export type TEnterExitOp = TEnterOp | TExitOp;
 export type TAnyOp       = TSimpleOp | TEnterOp | TExitOp | TJumpOp | TIfOp | TLoopOp;
 
@@ -58,19 +58,13 @@ export class JumpOp {
 }
 
 export class IfOp {
-    static create(condition: Expression | string, successOp: TEnterExitOp, failOp: TEnterExitOp): TIfOp {
-        if (typeof condition === 'string') {
-            condition = new Expression(condition);
-        }
+    static create(condition: IEvaluable<boolean>, successOp: TEnterExitOp, failOp: TEnterExitOp): TIfOp {
         return [Type.IF_OP, condition, successOp, failOp];
     }
 }
 
 export class LoopOp {
-    static create(count: Expression | string, op: TEnterOp): TLoopOp {
-        if (typeof count === 'string') {
-            count = new Expression(count);
-        }
+    static create(count: IEvaluable<number>, op: TEnterOp): TLoopOp {
         return [Type.LOOP_OP, count, op];
     }
 }

@@ -9,9 +9,9 @@ export function isEvaluable(object: any): object is IEvaluable<any> {
 }
 
 export class DeferredFunction implements IEvaluable<any> {
-    private func: Function;
+    private func: (entity: Entity) => any;
 
-    constructor(func: Function) {
+    constructor(func: (entity: Entity) => any) {
         this.func = func;
     }
 

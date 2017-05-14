@@ -10,7 +10,7 @@ let builder = new ModuleBuilder();
 builder
     .command({
         name: 'get',
-        compile: (parser) => (varSpec: string | Array<any>): IEvaluable<any> => {
+        compile: (parser) => (varSpec: string | string[]): Value | ArrayValue => {
             if (typeof varSpec === 'string') {
                 return new Value(varSpec);
             } else if (varSpec instanceof Array) {
@@ -21,21 +21,21 @@ builder
     })
     .command({
         name: '$',
-        compile: (parser) => (varSpec: string | Array<any>): IEvaluable<any> => {
+        compile: (parser) => (varSpec: string | string[]): Value | ArrayValue => {
             return parser.commands['get'](varSpec);
         },
         run: null
     })
     .command({
         name: 'val',
-        compile: (parser) => (func: Function): IEvaluable<any> => {
+        compile: (parser) => (func: (entity: Entity) => any): DeferredFunction => {
             return new DeferredFunction(func);
         },
         run: null
     })
     .command({
         name: 'expr',
-        compile: (parser) => (expr: string): IEvaluable<any> => {
+        compile: (parser) => (expr: string): Expression => {
             return new Expression(expr);
         },
         run: null
@@ -74,14 +74,16 @@ builder
     })
     .command({
         name: '_if',
-        compile: (parser) => (condition: string | Expression) => {
+        compile: (parser) => (condition: string | IEvaluable<boolean>) => {
+            var evalCondition = typeof condition === 'string' ? new Expression(condition) : condition;
+
             var ifBlock = Ops.Block.create([]);
             var successBlock = Ops.Block.create([]);
 
             parser
                 .addOp(Ops.EnterOp.create(ifBlock[0]))
                 .enter(ifBlock)
-                .addOp(Ops.IfOp.create(condition, Ops.EnterOp.create(successBlock[0]), null))
+                .addOp(Ops.IfOp.create(evalCondition, Ops.EnterOp.create(successBlock[0]), null))
                 .addOp(Ops.ExitOp.create(parser.cursor.blockId))
                 .enter(successBlock);
         },
@@ -89,7 +91,9 @@ builder
     })
     .command({
         name: '_elif',
-        compile: (parser) => (condition: string | Expression) => {
+        compile: (parser) => (condition: string | IEvaluable<boolean>) => {
+            var evalCondition = typeof condition === 'string' ? new Expression(condition) : condition;
+
             parser
                 .addOp(Ops.ExitOp.create(parser.cursor.blockId))
                 .exit();
@@ -102,7 +106,7 @@ builder
 
             parser
                 .enter(prevFailBlock)
-                .addOp(Ops.IfOp.create(condition, Ops.EnterOp.create(successBlock[0]), null))
+                .addOp(Ops.IfOp.create(evalCondition, Ops.EnterOp.create(successBlock[0]), null))
                 .addOp(Ops.ExitOp.create(parser.cursor.blockId))
                 .enter(successBlock);
         },
@@ -127,14 +131,15 @@ builder
     })
     .command({
         name: 'loop',
-        compile: (parser) => (count: number | string | Expression) => {
-            if (typeof count === 'number') {
-                count = count.toString();
-            }
+        compile: (parser) => (count: number | string | IEvaluable<number>) => {
+            var evalCount =
+                typeof count === 'number' ? new Expression(count.toString()) :
+                typeof count === 'string' ? new Expression(count) :
+                                            count;
 
             var loopBlock = Ops.Block.create([]);
             parser
-                .addOp(Ops.LoopOp.create(count, Ops.EnterOp.create(loopBlock[0])))
+                .addOp(Ops.LoopOp.create(evalCount, Ops.EnterOp.create(loopBlock[0])))
                 .enter(loopBlock);
         },
         run: null
@@ -150,7 +155,7 @@ builder
     })
     .command({
         name: 'wait',
-        compile: (parser) => (count: number | string | Expression) => {
+        compile: (parser) => (count: number | string | IEvaluable<number>) => {
             parser.commands['loop'](count);
             parser.addOp(Ops.SimpleOp.create('wait', []));
             parser.commands['endloop']();
