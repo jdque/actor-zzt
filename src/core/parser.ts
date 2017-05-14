@@ -124,7 +124,11 @@ export class Parser implements IParseState {
                 return;
             }
         }
-        this.modules.push(module);
+        this.modules.push({
+            name: namespace,
+            compileCommands: module.compileCommands,
+            runCommands: module.runCommands
+        });
 
         let compileCommands: CommandMap = {};
         for (let cmdName in module.compileCommands) {
@@ -166,12 +170,22 @@ export class Parser implements IParseState {
         return [this.labelStore, this.blockStore];
     }
 
-    parseCommands(entity: Entity): CommandMap {
-        //TODO - preserve namespaces as in compileCommands
-        let runCommands: CommandMap = {};
+    parseCommands(entity: Entity): CommandTree {
+        let runCommands: CommandTree = {};
         for (let module of this.modules) {
+            let moduleCommands: CommandMap = {};
             for (let cmdName of Object.keys(module.runCommands)) {
-                runCommands[cmdName] = module.runCommands[cmdName](entity);
+                moduleCommands[cmdName] = module.runCommands[cmdName](entity);
+            }
+
+            let namespace = module.name || "";
+            if (namespace.length > 0) {
+                if (!(namespace in runCommands)) {
+                    runCommands[namespace] = {};
+                }
+                Util.extend(runCommands[namespace], moduleCommands);
+            } else {
+                Util.extend(runCommands, moduleCommands);
             }
         }
 
@@ -179,7 +193,7 @@ export class Parser implements IParseState {
     }
 
     parse(entity: Entity): IExecutionContext {
-        let runCommands: CommandMap = this.parseCommands(entity);
+        let runCommands: CommandTree = this.parseCommands(entity);
         let [labelStore, blockStore] = this.parseStores(entity);
 
         return {

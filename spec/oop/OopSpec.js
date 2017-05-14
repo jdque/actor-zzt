@@ -3,7 +3,7 @@ describe("Oop", function () {
 	var board;
 
 	var DefaultParser = new ZZT.Parser();
-	DefaultParser.registerModule(ZZT.DefaultCommandSet);
+	DefaultParser.registerModule(ZZT.Default.DefaultCommandSet);
 
 	beforeAll(function () {
 		(function () {

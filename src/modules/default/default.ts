@@ -191,15 +191,15 @@ builder
             var commandSet = entity.execContext.commands[moduleName];
             entity.adoptions.push(commandSet);
 
-            var evaulatedParams = {};
+            var evaluatedParams = {};
             if (typeof initParams === 'object') {
                 for (let key of Object.keys(initParams)) {
                     var initVal = initParams[key];
-                    evaulatedParams[key] = isEvaluable(initVal) ? initVal.evaluate(entity) : initVal;
+                    evaluatedParams[key] = isEvaluable(initVal) ? initVal.evaluate(entity) : initVal;
                 }
             }
 
-            commandSet.__init__(evaulatedParams);
+            commandSet.__init__(evaluatedParams);
         }
     })
     .command({
@@ -318,4 +318,6 @@ builder
         }
     });
 
-export let DefaultCommandSet = builder.build('');
+export let Default = {
+    DefaultCommandSet: builder.build('')
+};
