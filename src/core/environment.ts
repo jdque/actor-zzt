@@ -9,12 +9,17 @@ import {IModule} from './module';
 
 type InstanceMap = {[name: string]: Entity[]};
 
-interface IBoardConfig {
+interface BoardConfig {
     executor: {
         autoStep: boolean;
     };
     parser: { modules: Array<{module: IModule, namespace: string}> } | Parser;
 };
+
+interface Adoption {
+    init: (params: any) => void;
+    destroy: () => void;
+}
 
 export class Entity {
     //properties
@@ -27,7 +32,7 @@ export class Entity {
     parent: Entity;
     //state
     variables: {[name: string]: any};
-    adoptions: CommandTree[];
+    adoptions: {[moduleName: string]: Adoption};
     groups: string[];
     ended: boolean;
     cycleEnded: boolean;
@@ -47,7 +52,7 @@ export class Entity {
         this.depth = 0;
         this.parent = null;
         this.variables = {};
-        this.adoptions = [];
+        this.adoptions = {};
         this.groups = [];
         this.ended = false;
         this.cycleEnded = false;
@@ -114,11 +119,24 @@ export class Entity {
         };
     }
 
-    destroyAdoptions(): void {
-        for (let commandSet of this.adoptions) {
-           commandSet['__destroy__']();
+    addAdoption(moduleName: string, initParams: {[key: string]: any}): void {
+        if (this.adoptions[moduleName]) {
+            return;
         }
-        this.adoptions = [];
+        let moduleCommands = this.execContext.commands[moduleName];
+        let adoption = {
+            init: moduleCommands['__init__'],
+            destroy: moduleCommands['__destroy__']
+        };
+        this.adoptions[moduleName] = adoption;
+        adoption.init(initParams);
+    }
+
+    destroyAdoptions(): void {
+        for (let name in this.adoptions) {
+            this.adoptions[name].destroy();
+        }
+        this.adoptions = {};
     }
 }
 
@@ -174,7 +192,7 @@ export class Board extends Entity {
         return this;
     }
 
-    configure(config: IBoardConfig): Board {
+    configure(config: BoardConfig): Board {
         if (config.parser instanceof Parser) {
             this.parser = config.parser;
         } else {

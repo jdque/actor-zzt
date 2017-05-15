@@ -193,9 +193,6 @@ builder
         name: 'adopt',
         compile: (parser) => parser.simpleCommand('adopt'),
         run: (entity) => (moduleName: string, initParams: {[key: string]: any}) => {
-            var commandSet = entity.execContext.commands[moduleName];
-            entity.adoptions.push(commandSet);
-
             var evaluatedParams = {};
             if (typeof initParams === 'object') {
                 for (let key of Object.keys(initParams)) {
@@ -203,8 +200,7 @@ builder
                     evaluatedParams[key] = isEvaluable(initVal) ? initVal.evaluate(entity) : initVal;
                 }
             }
-
-            commandSet.__init__(evaluatedParams);
+            entity.addAdoption(moduleName, evaluatedParams);
         }
     })
     .command({
