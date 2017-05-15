@@ -2,7 +2,7 @@ import {isEvaluable, IEvaluable, DeferredFunction, Expression} from '../../core/
 import {Entity} from '../../core/environment';
 import {ModuleBuilder} from '../../core/module';
 
-interface IInitParams {};
+interface InitParams {};
 
 let builder = new ModuleBuilder();
 
@@ -10,7 +10,7 @@ builder
     .command({
         name: '__init__',
         compile: null,
-        run: (entity: any) => (params: IInitParams) => {
+        run: (entity: any) => (params: InitParams) => {
             entity.input = {
                 downKeys: [],
                 handlers: {}

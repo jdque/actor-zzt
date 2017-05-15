@@ -4,7 +4,7 @@ import {ModuleBuilder} from '../../core/module';
 
 type PIXIStage = any;
 
-interface IInitParams {
+interface InitParams {
     stage: PIXIStage;
     cache: TextureCache;
     tiles: Tile[];
@@ -20,7 +20,7 @@ builder
     .command({
         name: '__init__',
         compile: null,
-        run: (entity: any) => (params: IInitParams) => {
+        run: (entity: any) => (params: InitParams) => {
             var obj = new TileSprite(params.cache, entity.name, params.tiles, params.width, params.height);
             obj.position.x = params.x;
             obj.position.y = params.y;

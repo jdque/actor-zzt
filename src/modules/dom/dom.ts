@@ -1,12 +1,16 @@
 import {ModuleBuilder} from '../../core/module';
 
+interface InitParams {
+    element: HTMLElement;
+};
+
 let builder = new ModuleBuilder();
 
 builder
     .command({
         name: '__init__',
         compile: null,
-        run: (entity: any) => (params) => {
+        run: (entity: any) => (params: InitParams) => {
             if (params.element) {
                 entity.element = params.element;
                 entity.element.onclick = function () {
