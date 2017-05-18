@@ -1,9 +1,8 @@
 import {Util} from './util';
 import {LabelStore, BlockStore} from './blocks';
 import {TBlock, TLabel, TAnyOp, SimpleOp} from './ops';
-import {IExecutionContext} from './executor';
 import {Entity} from './environment';
-import {IModule} from './module';
+import {IModule, ModuleData} from './module';
 
 type CommandMap = {[name: string]: Function};
 export type CommandTree = {[name: string]: CommandTree} | Function;
@@ -127,7 +126,8 @@ export class Parser implements IParseState {
         this.modules.push({
             name: namespace,
             compileCommands: module.compileCommands,
-            runCommands: module.runCommands
+            runCommands: module.runCommands,
+            data: module.data
         });
 
         let compileCommands: CommandMap = {};
@@ -154,7 +154,7 @@ export class Parser implements IParseState {
         };
     }
 
-    parseStores(entity: Entity): [LabelStore, BlockStore] {
+    parseStores(entity: Entity): {labelStore: LabelStore, blockStore: BlockStore} {
         this.resetState();
 
         let paramsStr = '["' + entity.initParams.join('","') + '"]';
@@ -167,40 +167,43 @@ export class Parser implements IParseState {
             'end();'
         )).apply(this, commandVals);
 
-        return [this.labelStore, this.blockStore];
+        return {
+            labelStore: this.labelStore,
+            blockStore: this.blockStore
+        };
     }
 
-    parseCommands(entity: Entity): CommandTree {
+    parseCommands(entity: Entity): {commands: CommandTree, moduleData: ModuleData} {
         let runCommands: CommandTree = {};
-        for (let module of this.modules) {
-            let moduleCommands: CommandMap = {};
-            for (let cmdName of Object.keys(module.runCommands)) {
-                moduleCommands[cmdName] = module.runCommands[cmdName](entity);
-            }
+        let moduleData: ModuleData = {};
 
+        for (let module of this.modules) {
             let namespace = module.name || "";
+
+            let data: ModuleData = {};
+            for (let key in module.data) {
+                data[key] = module.data[key];
+            }
+            moduleData[namespace] = data;
+
+            let commands: CommandMap = {};
+            for (let cmdName of Object.keys(module.runCommands)) {
+                commands[cmdName] = module.runCommands[cmdName](entity, data);
+            }
             if (namespace.length > 0) {
                 if (!(namespace in runCommands)) {
                     runCommands[namespace] = {};
                 }
-                Util.extend(runCommands[namespace], moduleCommands);
+                Util.extend(runCommands[namespace], commands);
             } else {
-                Util.extend(runCommands, moduleCommands);
+                Util.extend(runCommands, commands);
             }
+
         }
 
-        return runCommands;
-    }
-
-    parse(entity: Entity): IExecutionContext {
-        let runCommands: CommandTree = this.parseCommands(entity);
-        let [labelStore, blockStore] = this.parseStores(entity);
-
         return {
-            entity: entity,
             commands: runCommands,
-            labelStore: labelStore,
-            blockStore: blockStore
+            moduleData: moduleData
         };
     }
 }

@@ -2,7 +2,9 @@ import {Parser} from './parser';
 import {Entity} from './environment';
 
 interface CompileFunc { (parser: Parser): Function };
-interface RunFunc { (entity: Entity) : Function };
+interface RunFunc { (entity: Entity, data?: ModuleData) : Function };
+
+export type ModuleData = {[moduleName: string]: ModuleData} | any;
 
 export interface ICommand {
     name: string;
@@ -12,17 +14,20 @@ export interface ICommand {
 
 export interface IModule {
     name: string;
+    data: ModuleData;
     compileCommands: {[name: string]: CompileFunc};
     runCommands: {[name: string]: RunFunc};
 }
 
-export class Module implements IModule {
+class Module implements IModule {
     name: string;
+    data: ModuleData;
     compileCommands: {[name: string]: CompileFunc};
     runCommands: {[name: string]: RunFunc};
 
-    constructor(name: string, commands: ICommand[]) {
+    constructor(name: string, data: ModuleData, commands: ICommand[]) {
         this.name = name;
+        this.data = data;
         this.compileCommands = {};
         this.runCommands = {};
 
@@ -39,9 +44,11 @@ export class Module implements IModule {
 
 export class ModuleBuilder {
     private commandMap: {[name: string]: ICommand};
+    private dataObj: ModuleData;
 
     constructor() {
         this.commandMap = {};
+        this.dataObj = {};
     }
 
     command(command: ICommand): ModuleBuilder {
@@ -49,8 +56,13 @@ export class ModuleBuilder {
         return this;
     }
 
-    build(name: string): Module {
+    data(data: ModuleData): ModuleBuilder {
+        this.dataObj = data;
+        return this;
+    }
+
+    build(name: string): IModule {
         const commands = Object.keys(this.commandMap).map(key => this.commandMap[key]);
-        return new Module(name, commands);
+        return new Module(name, this.dataObj, commands);
     }
 }

@@ -1,6 +1,7 @@
 import {Type, TSimpleOp, TEnterOp, TExitOp, TJumpOp, TIfOp, TLoopOp, TAnyOp} from './ops';
 import {BlockStore, LabelStore, LabelOffsets} from './blocks';
 import {IEvaluable, isEvaluable} from './evaluables';
+import {ModuleData} from './module';
 import {Entity} from './environment';
 
 const LOOP_COUNT_KEY = '__loopCount';
@@ -31,6 +32,7 @@ export interface IExecutionState {
     currentFrame: IFrame;
     frameStack: IFrame[];
     labelOffsets: LabelOffsets;
+    moduleData: ModuleData;
 }
 
 export class Executor {

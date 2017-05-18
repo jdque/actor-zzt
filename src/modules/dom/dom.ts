@@ -4,16 +4,20 @@ interface InitParams {
     element: HTMLElement;
 };
 
+interface Data {
+    element: HTMLElement;
+};
+
 let builder = new ModuleBuilder();
 
 builder
     .command({
         name: '__init__',
         compile: null,
-        run: (entity: any) => (params: InitParams) => {
+        run: (entity, data: Data) => (params: InitParams) => {
             if (params.element) {
-                entity.element = params.element;
-                entity.element.onclick = function () {
+                data.element = params.element;
+                data.element.onclick = function () {
                     this.gotoLabel('@click')
                 }.bind(entity);
             }
@@ -22,34 +26,34 @@ builder
     .command({
         name: '__destroy__',
         compile: null,
-        run: (entity: any) => () => {
-            if (entity.element.parentNode) {
-                entity.element.parentNode.removeChild(entity.element);
+        run: (entity, data: Data) => () => {
+            if (data.element.parentNode) {
+                data.element.parentNode.removeChild(data.element);
             }
-            entity.element.onclick = null;
-            entity.element = null;
+            data.element.onclick = null;
+            data.element = null;
         }
     })
     .command({
         name: 'exec',
         compile: (parser) => parser.simpleCommand('html.exec'),
-        run: (entity: any) => (func: (element: HTMLElement) => any) => {
-            if (entity.element) {
-                func(entity.element);
+        run: (entity, data: Data) => (func: (element: HTMLElement) => any) => {
+            if (data.element) {
+                func(data.element);
             }
         }
     })
     .command({
         name: 'transistion',
         compile: (parser) => parser.simpleCommand('html.transition'),
-        run: (entity: any) => (attr: string, val: any, settings: any) => {
+        run: (entity, data: Data) => (attr: string, val: any, settings: any) => {
             function onTransitionEnd() {
-                entity.element.style.transition = "";
-                entity.element.removeEventListener('transitionend', onTransitionEnd);
+                data.element.style.transition = "";
+                data.element.removeEventListener('transitionend', onTransitionEnd);
             }
-            entity.element.addEventListener('transitionend', onTransitionEnd);
-            entity.element.style.transition = attr + " " + settings;
-            entity.element.style[attr] = val;
+            data.element.addEventListener('transitionend', onTransitionEnd);
+            data.element.style.transition = attr + " " + settings;
+            data.element.style[attr] = val;
         }
     })
 

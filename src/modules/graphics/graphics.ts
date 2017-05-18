@@ -14,21 +14,25 @@ interface InitParams {
     height: number;
 };
 
+interface Data {
+    pixiObject: any;
+};
+
 let builder = new ModuleBuilder();
 
 builder
     .command({
         name: '__init__',
         compile: null,
-        run: (entity: any) => (params: InitParams) => {
+        run: (entity, data: Data) => (params: InitParams) => {
             var obj = new TileSprite(params.cache, entity.name, params.tiles, params.width, params.height);
             obj.position.x = params.x;
             obj.position.y = params.y;
 
-            entity.pixiObject = obj;
+            data.pixiObject = obj;
 
-            if (entity.parent && entity.parent.pixiObject) {
-                entity.parent.pixiObject.addChild(obj);
+            if (entity.parent && entity.parent.data('pixi').pixiObject) {
+                entity.parent.data('pixi').pixiObject.addChild(obj);
             } else {
                 params.stage.addChild(obj);
             }
@@ -37,26 +41,26 @@ builder
     .command({
         name: '__destroy__',
         compile: null,
-        run: (entity: any) => () => {
-            entity.pixiObject.parent.removeChild(entity.pixiObject);
-            entity.pixiObject = null;
+        run: (entity, data: Data) => () => {
+            data.pixiObject.parent.removeChild(data.pixiObject);
+            data.pixiObject = null;
         }
     })
     .command({
         name: 'color',
         compile: (parser) => parser.simpleCommand('pixi.color'),
-        run: (entity: any) => (color: number) => {
-            if (entity.pixiObject) {
-                entity.pixiObject.tint = color || 0xFFFFFF;
+        run: (entity, data: Data) => (color: number) => {
+            if (data.pixiObject) {
+                data.pixiObject.tint = color || 0xFFFFFF;
             }
         }
     })
     .command({
         name: 'alpha',
         compile: (parser) => parser.simpleCommand('pixi.alpha'),
-        run: (entity: any) => (alpha: number) => {
-            if (entity.pixiObject) {
-                entity.pixiObject.alpha = alpha || 1;
+        run: (entity, data: Data) => (alpha: number) => {
+            if (data.pixiObject) {
+                data.pixiObject.alpha = alpha || 1;
             }
         }
     });

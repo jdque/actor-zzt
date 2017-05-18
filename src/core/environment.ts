@@ -5,7 +5,7 @@ import {TJumpOp, JumpOp} from'./ops';
 import {Group, GroupStore} from './group';
 import {CommandTree, Parser} from './parser';
 import {IExecutionContext, IExecutionState, StepResult, Executor} from './executor';
-import {IModule} from './module';
+import {IModule, ModuleData} from './module';
 
 type InstanceMap = {[name: string]: Entity[]};
 
@@ -70,7 +70,7 @@ export class Entity {
         this.gotoLabel('init', initArgs);
     }
 
-    gotoLabel(labelName: string, args: any[]): void {
+    gotoLabel(labelName: string, args: any[] = []): void {
         if (this.locked || !this.execState.labelOffsets.hasEnabled(labelName)) {
             return;
         }
@@ -110,15 +110,6 @@ export class Entity {
         this.execState.frameStack = [];
     }
 
-    initExecState(): void {
-        this.execState = {
-            currentLabelFrame: null,
-            currentFrame: null,
-            frameStack: [],
-            labelOffsets: new LabelOffsets(this.execContext.labelStore)
-        };
-    }
-
     addAdoption(moduleName: string, initParams: {[key: string]: any}): void {
         if (this.adoptions[moduleName]) {
             return;
@@ -137,6 +128,10 @@ export class Entity {
             this.adoptions[name].destroy();
         }
         this.adoptions = {};
+    }
+
+    data(moduleName: string): ModuleData {
+        return this.execState.moduleData[moduleName];
     }
 }
 
@@ -220,8 +215,23 @@ export class Board extends Entity {
         this.script = this.runScript;
         this.depth = 0;
         this.parent = null;
-        this.execContext = this.parser.parse(this);
-        this.initExecState();
+
+        let {labelStore, blockStore} = this.parser.parseStores(this);
+        let {commands, moduleData} = this.parser.parseCommands(this);
+        this.execContext = {
+            entity: this,
+            commands: commands,
+            labelStore: labelStore,
+            blockStore: blockStore
+        };
+        this.execState = {
+            currentLabelFrame: null,
+            currentFrame: null,
+            frameStack: [],
+            labelOffsets: new LabelOffsets(this.execContext.labelStore),
+            moduleData: moduleData
+        };
+
         this.begin([]);
         this.instances[0]["_board"] = [];
         this.instances[0]["_board"].push(this);
@@ -285,7 +295,7 @@ export class Board extends Entity {
             throw "Bad object definition";
         }
 
-        let [labelStore, blockStore] = this.parser.parseStores(obj);
+        let {labelStore, blockStore} = this.parser.parseStores(obj);
         obj.execContext = {
             entity: obj,
             commands: {},
@@ -303,6 +313,7 @@ export class Board extends Entity {
     }
 
     spawnObject(name: string, parent: Entity, initArgs: any[]): Entity {
+        //TODO - make sure Evaluable initArgs are evaluated with caller entity instead of spawnee
         if (!this.prototypes[name])
             return;
 
@@ -313,15 +324,23 @@ export class Board extends Entity {
 
         let prototype = this.prototypes[name];
         let instance = Entity.clone(prototype);
+        let {labelStore, blockStore} = prototype.execContext;
+        let {commands, moduleData} = this.parser.parseCommands(instance);
         instance.depth = parent ? parent.depth + 1 : 0;
         instance.parent = parent || instance;
         instance.execContext = {
             entity: instance,
-            commands: this.parser.parseCommands(instance),
-            labelStore: prototype.execContext.labelStore,
-            blockStore: prototype.execContext.blockStore
+            commands: commands,
+            labelStore: labelStore,
+            blockStore: blockStore
         };
-        instance.initExecState();
+        instance.execState = {
+            currentLabelFrame: null,
+            currentFrame: null,
+            frameStack: [],
+            labelOffsets: new LabelOffsets(labelStore),
+            moduleData: moduleData
+        };
         instance.begin(initArgs);
 
         this.spawnedObjs.push(instance);

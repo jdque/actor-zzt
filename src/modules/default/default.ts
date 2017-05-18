@@ -276,7 +276,12 @@ builder
         name: 'spawn',
         compile: (parser) => parser.simpleCommand('spawn'),
         run: (entity) => (objName: string, initArgs: any[]) => {
-            entity.board.spawnObject(objName, entity, initArgs);
+            //TODO handle if initArgs is ArrayValue
+            var evaluatedArgs = [];
+            for (let arg of initArgs) {
+                evaluatedArgs.push(isEvaluable(arg) ? arg.evaluate(entity) : arg);
+            }
+            entity.board.spawnObject(objName, entity, evaluatedArgs);
         }
     })
     .command({
