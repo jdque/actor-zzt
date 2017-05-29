@@ -1,27 +1,18 @@
 import {Entity} from '../../core/environment';
 
-declare var require;
-interface PIXIPoint { new(...args: any[]): PIXIPoint; x: any; y: any; };
-interface PIXIRectangle { new(...args: any[]): PIXIRectangle; width: any; height: any; x: any; y: any; };
-interface IPIXI {
-    Point: PIXIPoint;
-    Rectangle: PIXIRectangle;
-}
-var PIXI: IPIXI = require('pixi');
-
 interface ISpatialQuery {
     all: () => ISpatialQuery;
     not: () => ISpatialQuery;
-    intersect: (rect: PIXIRectangle, offsetX: number, offsetY: number) => ISpatialQuery;
-    inside: (rect: PIXIRectangle, offsetX: number, offsetY: number) => ISpatialQuery;
-    distance: (fromRect: PIXIRectangle, distance: number) => ISpatialQuery;
-    direction: (fromRect: PIXIRectangle, dirX: number, dirY: number) => ISpatialQuery;
+    intersect: (rect: PIXI.Rectangle, offsetX: number, offsetY: number) => ISpatialQuery;
+    inside: (rect: PIXI.Rectangle, offsetX: number, offsetY: number) => ISpatialQuery;
+    distance: (fromRect: PIXI.Rectangle, distance: number) => ISpatialQuery;
+    direction: (fromRect: PIXI.Rectangle, dirX: number, dirY: number) => ISpatialQuery;
     get: () => Entity[];
 };
 
 export interface Bounds {
-    min: PIXIPoint;
-    max: PIXIPoint;
+    min: PIXI.Point;
+    max: PIXI.Point;
 }
 
 //TODO - make generic
@@ -30,7 +21,7 @@ export interface IFinder {
     removeObject: (object: Entity) => void;
     updateObject: (object: Entity) => void;
     getNearbyObjects: (x: number, y: number, width: number, height: number) => Entity[];
-    getObjectBounds: (object: Entity) => PIXIRectangle;
+    getObjectBounds: (object: Entity) => PIXI.Rectangle;
     getGlobalBounds: () => Bounds;
 };
 
@@ -65,7 +56,7 @@ export class Spatial {
         this.finder.updateObject(object);
     }
 
-    isIntersect(rect1: PIXIRectangle, rect2: PIXIRectangle): boolean {
+    isIntersect(rect1: PIXI.Rectangle, rect2: PIXI.Rectangle): boolean {
         if (rect1.x + rect1.width > rect2.x &&
             rect1.x < rect2.x + rect2.width &&
             rect1.y + rect1.height > rect2.y &&
@@ -76,7 +67,7 @@ export class Spatial {
         return false;
     }
 
-    isInside(testRect: PIXIRectangle, inRect: PIXIRectangle): boolean {
+    isInside(testRect: PIXI.Rectangle, inRect: PIXI.Rectangle): boolean {
         if (testRect.x >= inRect.x &&
             testRect.y >= inRect.y &&
             testRect.x + testRect.width <= inRect.x + inRect.width &&
@@ -87,7 +78,7 @@ export class Spatial {
         return false;
     }
 
-    isWithin(testRect: PIXIRectangle, fromRect: PIXIRectangle, distance: number): boolean {
+    isWithin(testRect: PIXI.Rectangle, fromRect: PIXI.Rectangle, distance: number): boolean {
         if (this.isIntersect(testRect, fromRect)) {
             return true;
         }
@@ -118,7 +109,7 @@ export class Spatial {
         return false;
     }
 
-    isDirection(testRect: PIXIRectangle, fromRect: PIXIRectangle, dirX: number, dirY: number): boolean {
+    isDirection(testRect: PIXI.Rectangle, fromRect: PIXI.Rectangle, dirX: number, dirY: number): boolean {
         if (dirX === -1 && testRect.x + testRect.width > fromRect.x) return false;
         if (dirX === 1 && testRect.x < fromRect.x + fromRect.width) return false;
         if (dirY === -1 && testRect.y + testRect.height > fromRect.y) return false;
@@ -131,7 +122,7 @@ export class Spatial {
         return this.objects;
     }
 
-    getIntersect(rect: PIXIRectangle, offsetX: number, offsetY: number, excludeObject?: Entity): Entity[] {
+    getIntersect(rect: PIXI.Rectangle, offsetX: number, offsetY: number, excludeObject?: Entity): Entity[] {
         rect.x += offsetX || 0;
         rect.y += offsetY || 0;
 
@@ -149,7 +140,7 @@ export class Spatial {
         return objs;
     }
 
-    anyIntersect(rect: PIXIRectangle, offsetX: number, offsetY: number, excludeObject?: Entity): boolean {
+    anyIntersect(rect: PIXI.Rectangle, offsetX: number, offsetY: number, excludeObject?: Entity): boolean {
         rect.x += offsetX || 0;
         rect.y += offsetY || 0;
 
@@ -166,7 +157,7 @@ export class Spatial {
         return false;
     }
 
-    getInside(rect: PIXIRectangle, offsetX: number, offsetY: number): Entity[] {
+    getInside(rect: PIXI.Rectangle, offsetX: number, offsetY: number): Entity[] {
         rect.x += offsetX || 0;
         rect.y += offsetY || 0;
 
@@ -184,7 +175,7 @@ export class Spatial {
         return objs;
     }
 
-    getWithin(rect: PIXIRectangle, distance: number): Entity[] {
+    getWithin(rect: PIXI.Rectangle, distance: number): Entity[] {
         let objs = this.finder.getNearbyObjects(rect.x - distance, rect.y - distance, rect.width + distance * 2, rect.height + distance * 2);
         for (let i = objs.length - 1; i >= 0; i--) {
             if (!this.isWithin(objs[i].data('body').bounds, rect, distance)) {
@@ -196,7 +187,7 @@ export class Spatial {
         return objs;
     }
 
-    getDirection(rect: PIXIRectangle, dirX: number, dirY: number): Entity[] {
+    getDirection(rect: PIXI.Rectangle, dirX: number, dirY: number): Entity[] {
         let queryRect = new PIXI.Rectangle(0, 0, 0, 0);
         let bounds = this.finder.getGlobalBounds();
         if (dirX === -1) {
@@ -263,7 +254,7 @@ export class Spatial {
                 return closure;
             }
 
-            function intersect(rect: PIXIRectangle, offsetX: number, offsetY: number): ISpatialQuery {
+            function intersect(rect: PIXI.Rectangle, offsetX: number, offsetY: number): ISpatialQuery {
                 if (!resultSet) {
                     if (notIsActive) {
                         resultSet = listDiff(spatial.getAll(), spatial.getIntersect(rect, offsetX, offsetY));
@@ -282,7 +273,7 @@ export class Spatial {
                 return closure;
             }
 
-            function inside(rect: PIXIRectangle, offsetX: number, offsetY: number): ISpatialQuery {
+            function inside(rect: PIXI.Rectangle, offsetX: number, offsetY: number): ISpatialQuery {
                 if (!resultSet) {
                     if (notIsActive) {
                         resultSet = listDiff(spatial.getAll(), spatial.getInside(rect, offsetX, offsetY));
@@ -301,7 +292,7 @@ export class Spatial {
                 return closure;
             }
 
-            function distance(fromRect: PIXIRectangle, distance: number): ISpatialQuery {
+            function distance(fromRect: PIXI.Rectangle, distance: number): ISpatialQuery {
                 if (!resultSet) {
                     if (notIsActive) {
                         resultSet = listDiff(spatial.getAll(), spatial.getWithin(fromRect, distance));
@@ -320,7 +311,7 @@ export class Spatial {
                 return closure;
             }
 
-            function direction(fromRect: PIXIRectangle, dirX: number, dirY: number): ISpatialQuery {
+            function direction(fromRect: PIXI.Rectangle, dirX: number, dirY: number): ISpatialQuery {
                 if (!resultSet) {
                     if (notIsActive) {
                         resultSet = listDiff(spatial.getAll(), spatial.getDirection(fromRect, dirX, dirY));

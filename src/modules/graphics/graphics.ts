@@ -2,10 +2,8 @@ import {Tile, TileSprite, TilePalette} from './tile';
 import {TextureCache} from './texture_cache';
 import {ModuleBuilder} from '../../core/module';
 
-type PIXIStage = any;
-
 interface InitParams {
-    stage: PIXIStage;
+    stage: PIXI.Container;
     cache: TextureCache;
     tiles: Tile[];
     x: number;

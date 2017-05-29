@@ -1,12 +1,3 @@
-declare var require;
-interface PIXIPoint { new(...args: any[]): PIXIPoint; x: any; y: any; };
-interface PIXIRectangle { new(...args: any[]): PIXIRectangle; width: any; height: any; x: any; y: any; };
-interface IPIXI {
-    Point: PIXIPoint;
-    Rectangle: PIXIRectangle;
-}
-var PIXI: IPIXI = require('pixi');
-
 type TileMap = number[];
 
 export class TilemapCollider {
@@ -27,7 +18,7 @@ export class TilemapCollider {
         return this.tilemap[this.width * y + x];
     }
 
-    getTilesInRect(rect: PIXIRectangle): TileMap {
+    getTilesInRect(rect: PIXI.Rectangle): TileMap {
         let tiles = [];
         for (let y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
             for (let x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
@@ -38,7 +29,7 @@ export class TilemapCollider {
         return tiles;
     }
 
-    anyTileInRect(rect: PIXIRectangle): boolean {
+    anyTileInRect(rect: PIXI.Rectangle): boolean {
         for (let y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
             for (let x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
                 let tile = this.getTile(x / 8, y / 8);

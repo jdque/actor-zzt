@@ -1,16 +1,5 @@
 import {TextureCache} from './texture_cache';
 
-declare var require;
-interface PIXIRectangle { new(...args: any[]): PIXIRectangle; width: any; height: any; x: any; y: any;};
-interface PIXISprite    { new(...args: any[]): PIXISprite; position: any; };
-interface PIXITexture   { new(...args: any[]): PIXITexture; fromCanvas: any; }
-interface IPIXI {
-    Rectangle: PIXIRectangle;
-    Sprite: PIXISprite;
-    Texture: PIXITexture;
-}
-var PIXI: IPIXI = require('pixi');
-
 export interface ITile {
     fg: number;
     bg: number;

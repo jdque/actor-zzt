@@ -1,16 +1,5 @@
 import {ITile} from './tile';
 
-declare var require;
-interface PIXIRectangle { new(...args: any[]): PIXIRectangle; width: any; height: any; x: any; y: any;};
-interface PIXISprite    { new(...args: any[]): PIXISprite; position: any; };
-interface PIXITexture   { new(...args: any[]): PIXITexture; fromCanvas: any; }
-interface IPIXI {
-    Rectangle: PIXIRectangle;
-    Sprite: PIXISprite;
-    Texture: PIXITexture;
-}
-var PIXI: IPIXI = require('pixi');
-
 interface RGBColor {
     r: number;
     g: number;
@@ -18,14 +7,14 @@ interface RGBColor {
 };
 
 interface TreeNode {
-    rect: PIXIRectangle;
+    rect: PIXI.Rectangle;
     used: boolean;
     left: TreeNode;
     right: TreeNode;
 };
 
 interface TextureRef {
-    texture: PIXITexture;
+    texture: PIXI.Texture;
     x: number;
     y: number;
 }
@@ -33,13 +22,13 @@ interface TextureRef {
 export class TextureCache {
     tileset: HTMLImageElement;
     canvas: HTMLCanvasElement;
-    baseTexture: PIXITexture;
+    baseTexture: PIXI.BaseTexture;
     cache: {[id: string]: TextureRef};
     binTree: TreeNode;
 
     constructor(canvas: HTMLCanvasElement, tileset: HTMLImageElement) {
         this.tileset = tileset;
-        this.baseTexture = PIXI.Texture.fromCanvas(canvas);
+        this.baseTexture = PIXI.BaseTexture.fromCanvas(canvas);
         this.canvas = canvas;
         this.cache = {};
         this.binTree = {
@@ -114,7 +103,7 @@ export class TextureCache {
         return traverse(this.binTree, 0);
     }
 
-    cacheTiles(name: string, tiles: ITile[], width: number, height: number): PIXITexture {
+    cacheTiles(name: string, tiles: ITile[], width: number, height: number): PIXI.Texture {
         if (!this.cache[name]) {
             let coord = this.getNextCoord(8*width, 8*height);
             if (!coord) {

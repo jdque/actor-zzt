@@ -6,13 +6,6 @@ import {GridHash} from './grid_hash';
 import {TilemapCollider} from './collider';
 import {Spatial} from './spatial';
 
-declare var require;
-interface PIXIRectangle { new(...args: any[]): PIXIRectangle; width: any; height: any; x: any; y: any; };
-interface IPIXI {
-    Rectangle: PIXIRectangle;
-}
-var PIXI: IPIXI = require('pixi');
-
 interface InitParams {
     tiles: any[];
     width: number;
@@ -20,7 +13,7 @@ interface InitParams {
 }
 
 interface Data {
-    bounds: PIXIRectangle;
+    bounds: PIXI.Rectangle;
     spatial: any;
     tilemap: any;
     lastDelta: Delta;

@@ -1,15 +1,6 @@
 import {Entity} from '../../core/environment';
 import {Bounds, IFinder} from './spatial';
 
-declare var require;
-interface PIXIPoint { new(...args: any[]): PIXIPoint; x: any; y: any; };
-interface PIXIRectangle { new(...args: any[]): PIXIRectangle; width: any; height: any; x: any; y: any; };
-interface IPIXI {
-    Point: PIXIPoint;
-    Rectangle: PIXIRectangle;
-}
-var PIXI: IPIXI = require('pixi');
-
 export class GridHash implements IFinder {
     cellSize: number;
     cells: {[key: string]: Entity[]};
@@ -107,7 +98,7 @@ export class GridHash implements IFinder {
         }
     }
 
-    getObjectBounds(object: Entity): PIXIRectangle {
+    getObjectBounds(object: Entity): PIXI.Rectangle {
         return object.data('body').bounds;
     }
 
