@@ -1,325 +1,359 @@
+import {Entity} from '../../core/environment';
+
 declare var require;
+interface PIXIPoint { new(...args: any[]): PIXIPoint; x: any; y: any; };
 interface PIXIRectangle { new(...args: any[]): PIXIRectangle; width: any; height: any; x: any; y: any; };
 interface IPIXI {
+    Point: PIXIPoint;
     Rectangle: PIXIRectangle;
 }
 var PIXI: IPIXI = require('pixi');
 
-export function Spatial(finder) {
-    this.finder = finder;
-    this.objects = [];
+interface ISpatialQuery {
+    all: () => ISpatialQuery;
+    not: () => ISpatialQuery;
+    intersect: (rect: PIXIRectangle, offsetX: number, offsetY: number) => ISpatialQuery;
+    inside: (rect: PIXIRectangle, offsetX: number, offsetY: number) => ISpatialQuery;
+    distance: (fromRect: PIXIRectangle, distance: number) => ISpatialQuery;
+    direction: (fromRect: PIXIRectangle, dirX: number, dirY: number) => ISpatialQuery;
+    get: () => Entity[];
+};
+
+export interface Bounds {
+    min: PIXIPoint;
+    max: PIXIPoint;
 }
 
-Spatial.prototype.register = function (object) {
-    if (this.objects.indexOf(object) !== -1) {
-        return;
-    }
-    this.objects.push(object);
-    this.finder.addObject(object);
-}
+//TODO - make generic
+export interface IFinder {
+    addObject: (object: Entity) => void;
+    removeObject: (object: Entity) => void;
+    updateObject: (object: Entity) => void;
+    getNearbyObjects: (x: number, y: number, width: number, height: number) => Entity[];
+    getObjectBounds: (object: Entity) => PIXIRectangle;
+    getGlobalBounds: () => Bounds;
+};
 
-Spatial.prototype.unregister = function (object) {
-    var idx = this.objects.indexOf(object);
-    if (idx === -1) {
-        return;
-    }
-    this.objects[idx] = this.objects[this.objects.length - 1];
-    this.objects.pop();
-    this.finder.removeObject(object);
-}
+export class Spatial {
+    finder: IFinder;
+    objects: Entity[];
 
-Spatial.prototype.update = function (object) {
-    this.finder.updateObject(object);
-}
-
-Spatial.prototype.isIntersect = function (rect1, rect2) {
-    if (rect1.x + rect1.width > rect2.x &&
-        rect1.x < rect2.x + rect2.width &&
-        rect1.y + rect1.height > rect2.y &&
-        rect1.y < rect2.y + rect2.height) {
-        return true;
+    constructor(finder: IFinder) {
+        this.finder = finder;
+        this.objects = [];
     }
 
-    return false;
-}
-
-Spatial.prototype.isInside = function (testRect, inRect) {
-    if (testRect.x >= inRect.x &&
-        testRect.y >= inRect.y &&
-        testRect.x + testRect.width <= inRect.x + inRect.width &&
-        testRect.y + testRect.height <= inRect.y + inRect.height) {
-        return true;
-    }
-
-    return false;
-}
-
-Spatial.prototype.isWithin = function (testRect, fromRect, distance) {
-    if (this.isIntersect(testRect, fromRect)) {
-        return true;
-    }
-
-    var fromX = 0;
-    var fromY = 0;
-    var testX = 0;
-    var testY = 0;
-
-    if (fromRect.x + fromRect.width < testRect.x) {
-        fromX = fromRect.x + fromRect.width;
-    }
-    else if (testRect.x + testRect.width < fromRect.x) {
-        testX = testRect.x + testRect.width
-    }
-
-    if (fromRect.y + fromRect.height < testRect.y) {
-        fromY = fromRect.y + fromRect.height;
-    }
-    else if (testRect.y + testRect.height < fromRect.y) {
-        testY = testRect.y + testRect.height;
-    }
-
-    if (Math.sqrt(Math.pow(fromX - testX, 2) + Math.pow(fromY - testY, 2)) <= distance) {
-        return true;
-    }
-
-    return false;
-}
-
-Spatial.prototype.isDirection = function (testRect, fromRect, dirX, dirY) {
-    if (dirX === -1 && testRect.x + testRect.width > fromRect.x) return false;
-    if (dirX === 1 && testRect.x < fromRect.x + fromRect.width) return false;
-    if (dirY === -1 && testRect.y + testRect.height > fromRect.y) return false;
-    if (dirY === 1 && testRect.y < fromRect.y + fromRect.height) return false;
-
-    return true;
-}
-
-Spatial.prototype.getAll = function () {
-    return this.objects;
-}
-
-Spatial.prototype.getIntersect = function (rect, offsetX, offsetY, excludeObject) {
-    rect.x += offsetX || 0;
-    rect.y += offsetY || 0;
-
-    var objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
-    for (var i = objs.length - 1; i >= 0; i--) {
-        if (!this.isIntersect(objs[i].data('body').bounds, rect) || objs[i] === excludeObject) {
-            objs[i] = objs[objs.length - 1];
-            objs.pop();
+    register(object: Entity): void {
+        if (this.objects.indexOf(object) !== -1) {
+            return;
         }
+        this.objects.push(object);
+        this.finder.addObject(object);
     }
 
-    rect.x -= offsetX || 0;
-    rect.y -= offsetY || 0;
+    unregister(object: Entity): void {
+        let idx = this.objects.indexOf(object);
+        if (idx === -1) {
+            return;
+        }
+        this.objects[idx] = this.objects[this.objects.length - 1];
+        this.objects.pop();
+        this.finder.removeObject(object);
+    }
 
-    return objs;
-}
+    update(object: Entity): void {
+        this.finder.updateObject(object);
+    }
 
-Spatial.prototype.anyIntersect = function (rect, offsetX, offsetY, excludeObject) {
-    rect.x += offsetX || 0;
-    rect.y += offsetY || 0;
-
-    var objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
-    for (var i = objs.length - 1; i >= 0; i--) {
-        if (this.isIntersect(objs[i].data('body').bounds, rect) && objs[i] !== excludeObject) {
+    isIntersect(rect1: PIXIRectangle, rect2: PIXIRectangle): boolean {
+        if (rect1.x + rect1.width > rect2.x &&
+            rect1.x < rect2.x + rect2.width &&
+            rect1.y + rect1.height > rect2.y &&
+            rect1.y < rect2.y + rect2.height) {
             return true;
         }
+
+        return false;
     }
 
-    rect.x -= offsetX || 0;
-    rect.y -= offsetY || 0;
-
-    return false;
-}
-
-Spatial.prototype.getInside = function (rect, offsetX, offsetY) {
-    rect.x += offsetX || 0;
-    rect.y += offsetY || 0;
-
-    var objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
-    for (var i = objs.length - 1; i >= 0; i--) {
-        if (!this.isInside(objs[i].data('body').bounds, rect)) {
-            objs[i] = objs[objs.length - 1];
-            objs.pop();
+    isInside(testRect: PIXIRectangle, inRect: PIXIRectangle): boolean {
+        if (testRect.x >= inRect.x &&
+            testRect.y >= inRect.y &&
+            testRect.x + testRect.width <= inRect.x + inRect.width &&
+            testRect.y + testRect.height <= inRect.y + inRect.height) {
+            return true;
         }
+
+        return false;
     }
 
-    rect.x -= offsetX || 0;
-    rect.y -= offsetY || 0;
-
-    return objs;
-}
-
-Spatial.prototype.getWithin = function (rect, distance) {
-    var objs = this.finder.getNearbyObjects(rect.x - distance, rect.y - distance, rect.width + distance * 2, rect.height + distance * 2);
-    for (var i = objs.length - 1; i >= 0; i--) {
-        if (!this.isWithin(objs[i].data('body').bounds, rect, distance)) {
-            objs[i] = objs[objs.length - 1];
-            objs.pop();
+    isWithin(testRect: PIXIRectangle, fromRect: PIXIRectangle, distance: number): boolean {
+        if (this.isIntersect(testRect, fromRect)) {
+            return true;
         }
+
+        let fromX = 0;
+        let fromY = 0;
+        let testX = 0;
+        let testY = 0;
+
+        if (fromRect.x + fromRect.width < testRect.x) {
+            fromX = fromRect.x + fromRect.width;
+        }
+        else if (testRect.x + testRect.width < fromRect.x) {
+            testX = testRect.x + testRect.width
+        }
+
+        if (fromRect.y + fromRect.height < testRect.y) {
+            fromY = fromRect.y + fromRect.height;
+        }
+        else if (testRect.y + testRect.height < fromRect.y) {
+            testY = testRect.y + testRect.height;
+        }
+
+        if (Math.sqrt(Math.pow(fromX - testX, 2) + Math.pow(fromY - testY, 2)) <= distance) {
+            return true;
+        }
+
+        return false;
     }
 
-    return objs;
-}
+    isDirection(testRect: PIXIRectangle, fromRect: PIXIRectangle, dirX: number, dirY: number): boolean {
+        if (dirX === -1 && testRect.x + testRect.width > fromRect.x) return false;
+        if (dirX === 1 && testRect.x < fromRect.x + fromRect.width) return false;
+        if (dirY === -1 && testRect.y + testRect.height > fromRect.y) return false;
+        if (dirY === 1 && testRect.y < fromRect.y + fromRect.height) return false;
 
-Spatial.prototype.getDirection = function (rect, dirX, dirY) {
-    var queryRect = new PIXI.Rectangle(0, 0, 0, 0);
-    var bounds = this.finder.getBounds();
-    if (dirX === -1) {
-        queryRect.x = bounds.min.x;
-        queryRect.width = rect.x - bounds.min.x;
-    }
-    else if (dirX === 1) {
-        queryRect.x = rect.x + rect.width;
-        queryRect.width = bounds.max.x - queryRect.x;
-    }
-    else {
-        queryRect.x = bounds.min.x;
-        queryRect.width = bounds.max.x - bounds.min.x;
+        return true;
     }
 
-    if (dirY === -1) {
-        queryRect.y = bounds.min.y;
-        queryRect.height = rect.y - bounds.min.y;
-    }
-    else if (dirY === 1) {
-        queryRect.y = rect.y + rect.height;
-        queryRect.height = bounds.max.y - queryRect.y;
-    }
-    else {
-        queryRect.y = bounds.min.y;
-        queryRect.height = bounds.max.y - bounds.min.y;
+    getAll(): Entity[] {
+        return this.objects;
     }
 
-    return this.getInside(queryRect, 0, 0);
-}
+    getIntersect(rect: PIXIRectangle, offsetX: number, offsetY: number, excludeObject?: Entity): Entity[] {
+        rect.x += offsetX || 0;
+        rect.y += offsetY || 0;
 
-Spatial.prototype.query = function () {
-    return (function (spatial) {
-        var resultSet = null;
-        var notIsActive = false;
+        let objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
+        for (let i = objs.length - 1; i >= 0; i--) {
+            if (!this.isIntersect(objs[i].data('body').bounds, rect) || objs[i] === excludeObject) {
+                objs[i] = objs[objs.length - 1];
+                objs.pop();
+            }
+        }
 
-        function listDiff(list, removeList) {
-            var diffList = []
-            for (var i = 0; i < list.length; i++) {
-                if (removeList.indexOf(list[i]) === -1) {
-                    diffList.push(list[i]);
+        rect.x -= offsetX || 0;
+        rect.y -= offsetY || 0;
+
+        return objs;
+    }
+
+    anyIntersect(rect: PIXIRectangle, offsetX: number, offsetY: number, excludeObject?: Entity): boolean {
+        rect.x += offsetX || 0;
+        rect.y += offsetY || 0;
+
+        let objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
+        for (let i = objs.length - 1; i >= 0; i--) {
+            if (this.isIntersect(objs[i].data('body').bounds, rect) && objs[i] !== excludeObject) {
+                return true;
+            }
+        }
+
+        rect.x -= offsetX || 0;
+        rect.y -= offsetY || 0;
+
+        return false;
+    }
+
+    getInside(rect: PIXIRectangle, offsetX: number, offsetY: number): Entity[] {
+        rect.x += offsetX || 0;
+        rect.y += offsetY || 0;
+
+        let objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
+        for (let i = objs.length - 1; i >= 0; i--) {
+            if (!this.isInside(objs[i].data('body').bounds, rect)) {
+                objs[i] = objs[objs.length - 1];
+                objs.pop();
+            }
+        }
+
+        rect.x -= offsetX || 0;
+        rect.y -= offsetY || 0;
+
+        return objs;
+    }
+
+    getWithin(rect: PIXIRectangle, distance: number): Entity[] {
+        let objs = this.finder.getNearbyObjects(rect.x - distance, rect.y - distance, rect.width + distance * 2, rect.height + distance * 2);
+        for (let i = objs.length - 1; i >= 0; i--) {
+            if (!this.isWithin(objs[i].data('body').bounds, rect, distance)) {
+                objs[i] = objs[objs.length - 1];
+                objs.pop();
+            }
+        }
+
+        return objs;
+    }
+
+    getDirection(rect: PIXIRectangle, dirX: number, dirY: number): Entity[] {
+        let queryRect = new PIXI.Rectangle(0, 0, 0, 0);
+        let bounds = this.finder.getGlobalBounds();
+        if (dirX === -1) {
+            queryRect.x = bounds.min.x;
+            queryRect.width = rect.x - bounds.min.x;
+        }
+        else if (dirX === 1) {
+            queryRect.x = rect.x + rect.width;
+            queryRect.width = bounds.max.x - queryRect.x;
+        }
+        else {
+            queryRect.x = bounds.min.x;
+            queryRect.width = bounds.max.x - bounds.min.x;
+        }
+
+        if (dirY === -1) {
+            queryRect.y = bounds.min.y;
+            queryRect.height = rect.y - bounds.min.y;
+        }
+        else if (dirY === 1) {
+            queryRect.y = rect.y + rect.height;
+            queryRect.height = bounds.max.y - queryRect.y;
+        }
+        else {
+            queryRect.y = bounds.min.y;
+            queryRect.height = bounds.max.y - bounds.min.y;
+        }
+
+        return this.getInside(queryRect, 0, 0);
+    }
+
+    query(): ISpatialQuery {
+        return (function (spatial: Spatial): ISpatialQuery {
+            let resultSet: Entity[] = null;
+            let notIsActive: boolean = false;
+
+            function listDiff(list: any[], removeList: any[]): any[] {
+                let diffList = [];
+                for (let item of list) {
+                    if (removeList.indexOf(item) === -1) {
+                        diffList.push(item);
+                    }
                 }
+
+                return diffList;
             }
 
-            return diffList;
-        }
+            function all(): ISpatialQuery {
+                if (!resultSet) {
+                    if (notIsActive) {
+                        resultSet = [];
+                    }
+                    else {
+                        resultSet = spatial.getAll();
+                    }
+                }
 
-        function all() {
-            if (!resultSet) {
-                if (notIsActive) {
-                    resultSet = [];
+                notIsActive = false;
+                return closure;
+            }
+
+            function not(): ISpatialQuery {
+                notIsActive = !notIsActive;
+                return closure;
+            }
+
+            function intersect(rect: PIXIRectangle, offsetX: number, offsetY: number): ISpatialQuery {
+                if (!resultSet) {
+                    if (notIsActive) {
+                        resultSet = listDiff(spatial.getAll(), spatial.getIntersect(rect, offsetX, offsetY));
+                    }
+                    else {
+                        resultSet = spatial.getIntersect(rect, offsetX, offsetY);
+                    }
                 }
                 else {
-                    resultSet = spatial.getAll();
+                    resultSet = resultSet.filter((obj: Entity) => {
+                        return spatial.isIntersect(obj.data('body').bounds, rect) !== notIsActive;
+                    });
                 }
+
+                notIsActive = false;
+                return closure;
             }
 
-            notIsActive = false;
-            return closure;
-        }
-
-        function intersect(rect, offsetX, offsetY) {
-            if (!resultSet) {
-                if (notIsActive) {
-                    resultSet = listDiff(spatial.getAll(), spatial.getIntersect(rect, offsetX, offsetY));
-                }
-                else {
-                    resultSet = spatial.getIntersect(rect, offsetX, offsetY);
-                }
-            }
-            else {
-                resultSet = resultSet.filter(function (obj) {
-                    return spatial.isIntersect(obj.data('body').bounds, rect) !== notIsActive;
-                });
-            }
-
-            notIsActive = false;
-            return closure;
-        }
-
-        function inside(rect, offsetX, offsetY) {
-            if (!resultSet) {
-                if (notIsActive) {
-                    resultSet = listDiff(spatial.getAll(), spatial.getInside(rect, offsetX, offsetY));
+            function inside(rect: PIXIRectangle, offsetX: number, offsetY: number): ISpatialQuery {
+                if (!resultSet) {
+                    if (notIsActive) {
+                        resultSet = listDiff(spatial.getAll(), spatial.getInside(rect, offsetX, offsetY));
+                    }
+                    else {
+                        resultSet = spatial.getInside(rect, offsetX, offsetY);
+                    }
                 }
                 else {
-                    resultSet = spatial.getInside(rect, offsetX, offsetY);
+                    resultSet = resultSet.filter((obj: Entity) => {
+                        return spatial.isInside(obj.data('body').bounds, rect) !== notIsActive;
+                    });
                 }
-            }
-            else {
-                resultSet = resultSet.filter(function (obj) {
-                    return spatial.isInside(obj.data('body').bounds, rect) !== notIsActive;
-                });
+
+                notIsActive = false;
+                return closure;
             }
 
-            notIsActive = false;
-            return closure;
-        }
-
-        function distance(fromRect, distance) {
-            if (!resultSet) {
-                if (notIsActive) {
-                    resultSet = listDiff(spatial.getAll(), spatial.getWithin(fromRect, distance));
-                }
-                else {
-                    resultSet = spatial.getWithin(fromRect, distance);
-                }
-            }
-            else {
-                resultSet = resultSet.filter(function (obj) {
-                    return spatial.isWithin(obj.data('body').bounds, fromRect, distance) !== notIsActive;
-                });
-            }
-
-            notIsActive = false;
-            return closure;
-        }
-
-        function direction(fromRect, dirX, dirY) {
-            if (!resultSet) {
-                if (notIsActive) {
-                    resultSet = listDiff(spatial.getAll(), spatial.getDirection(fromRect, dirX, dirY));
+            function distance(fromRect: PIXIRectangle, distance: number): ISpatialQuery {
+                if (!resultSet) {
+                    if (notIsActive) {
+                        resultSet = listDiff(spatial.getAll(), spatial.getWithin(fromRect, distance));
+                    }
+                    else {
+                        resultSet = spatial.getWithin(fromRect, distance);
+                    }
                 }
                 else {
-                    resultSet = spatial.getDirection(fromRect, dirX, dirY);
+                    resultSet = resultSet.filter((obj: Entity) => {
+                        return spatial.isWithin(obj.data('body').bounds, fromRect, distance) !== notIsActive;
+                    });
                 }
-            }
-            else {
-                resultSet = resultSet.filter(function (obj) {
-                    return spatial.isDirection(obj.data('body').bounds, fromRect, dirX, dirY) !== notIsActive;
-                });
+
+                notIsActive = false;
+                return closure;
             }
 
-            notIsActive = false;
+            function direction(fromRect: PIXIRectangle, dirX: number, dirY: number): ISpatialQuery {
+                if (!resultSet) {
+                    if (notIsActive) {
+                        resultSet = listDiff(spatial.getAll(), spatial.getDirection(fromRect, dirX, dirY));
+                    }
+                    else {
+                        resultSet = spatial.getDirection(fromRect, dirX, dirY);
+                    }
+                }
+                else {
+                    resultSet = resultSet.filter((obj: Entity) => {
+                        return spatial.isDirection(obj.data('body').bounds, fromRect, dirX, dirY) !== notIsActive;
+                    });
+                }
+
+                notIsActive = false;
+                return closure;
+            }
+
+            function get(): Entity[] {
+                return resultSet;
+            }
+
+            let closure: ISpatialQuery = {
+                all: all,
+                intersect: intersect,
+                inside: inside,
+                distance: distance,
+                direction: direction,
+                not: not,
+                get: get
+            }
+
             return closure;
-        }
-
-        function not() {
-            notIsActive = !notIsActive;
-            return closure;
-        }
-
-        function get() {
-            return resultSet;
-        }
-
-        var closure = {
-            all: all,
-            intersect: intersect,
-            inside: inside,
-            distance: distance,
-            direction: direction,
-            not: not,
-            get: get
-        }
-
-        return closure;
-    })(this);
+        })(this);
+    }
 }

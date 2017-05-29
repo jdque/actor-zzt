@@ -1,5 +1,6 @@
 import * as Ops from '../../core/ops';
 import {DeferredFunction} from '../../core/evaluables';
+import {Entity} from '../../core/environment';
 import {ModuleBuilder} from '../../core/module';
 import {GridHash} from './grid_hash';
 import {TilemapCollider} from './collider';
@@ -22,16 +23,17 @@ interface Data {
     bounds: PIXIRectangle;
     spatial: any;
     tilemap: any;
-    lastDelta: {dx: number, dy: number};
+    lastDelta: Delta;
 }
 
-function getDirectionDelta(dirStr, entity) {
+interface Delta {
+    dx: number;
+    dy: number;
+}
+
+function getDirectionDelta(dirStr: string, entity: Entity): Delta {
     var dx = 0;
     var dy = 0;
-
-    if (dirStr === 'flow') {
-        return entity.data('body').lastDelta;
-    }
 
     switch(dirStr) {
         case 'n':
@@ -52,6 +54,11 @@ function getDirectionDelta(dirStr, entity) {
             else if (dir === 1) { dy = 8;  }
             else if (dir === 2) { dx = -8; }
             else                { dx = 8;  }
+            break;
+        case 'flow':
+            var lastDelta = (<Data>entity.data('body')).lastDelta;
+            dx = lastDelta.dx;
+            dy = lastDelta.dy;
             break;
     }
 
@@ -90,8 +97,8 @@ builder
     })
     .command({
         name: 'blocked',
-        compile: (parser) => (dir) => {
-            return new DeferredFunction(function (entity) {
+        compile: (parser) => (dir: string): DeferredFunction => {
+            return new DeferredFunction((entity): boolean => {
                 let data: Data = entity.data('body');
 
                 var blocked = false;
@@ -117,8 +124,8 @@ builder
     })
     .command({
         name: 'dir',
-        compile: (parser) => (dir) => {
-            return new DeferredFunction(function (entity) {
+        compile: (parser) => (dir: string): DeferredFunction => {
+            return new DeferredFunction((entity): Entity[] => {
                 let data: Data = entity.data('body');
 
                 var delta = getDirectionDelta(dir, entity);
@@ -134,7 +141,7 @@ builder
     .command({
         name: 'move_to',
         compile: (parser) => parser.simpleCommand('body.move_to'),
-        run: (entity, data: Data) => (x, y) => {
+        run: (entity, data: Data) => (x: number, y: number) => {
             if (!data)
                 return;
 
@@ -151,7 +158,7 @@ builder
     .command({
         name: 'move_by',
         compile: (parser) => parser.simpleCommand('body.move_by'),
-        run: (entity, data: Data) => (dx, dy) => {
+        run: (entity, data: Data) => (dx: number, dy: number) => {
             if (!data)
                 return;
 
@@ -177,7 +184,7 @@ builder
     })
     .command({
         name: 'move',
-        compile: (parser) => (dirStr) => {
+        compile: (parser) => (dirStr: string) => {
             var dirs = dirStr.split('/');
             for (var i = 0; i < dirs.length; i++) {
                 if (dirs[i].length === 0)
@@ -187,7 +194,7 @@ builder
                 parser.commands['wait'](5);
             }
         },
-        run: (entity, data: Data) => (dir) => {
+        run: (entity, data: Data) => (dir: string) => {
             var delta = getDirectionDelta(dir, entity);
             entity.execContext.commands['body']['move_by'](delta.dx, delta.dy);
             data.lastDelta = delta;
