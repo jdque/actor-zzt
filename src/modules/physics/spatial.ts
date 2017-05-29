@@ -57,10 +57,10 @@ export class Spatial {
     }
 
     isIntersect(rect1: PIXI.Rectangle, rect2: PIXI.Rectangle): boolean {
-        if (rect1.x + rect1.width > rect2.x &&
-            rect1.x < rect2.x + rect2.width &&
-            rect1.y + rect1.height > rect2.y &&
-            rect1.y < rect2.y + rect2.height) {
+        if (rect1.right > rect2.left &&
+            rect1.left < rect2.right &&
+            rect1.bottom > rect2.top &&
+            rect1.top < rect2.bottom) {
             return true;
         }
 
@@ -68,10 +68,10 @@ export class Spatial {
     }
 
     isInside(testRect: PIXI.Rectangle, inRect: PIXI.Rectangle): boolean {
-        if (testRect.x >= inRect.x &&
-            testRect.y >= inRect.y &&
-            testRect.x + testRect.width <= inRect.x + inRect.width &&
-            testRect.y + testRect.height <= inRect.y + inRect.height) {
+        if (testRect.left >= inRect.left &&
+            testRect.top >= inRect.top &&
+            testRect.right <= inRect.right &&
+            testRect.bottom <= inRect.bottom) {
             return true;
         }
 
@@ -88,18 +88,18 @@ export class Spatial {
         let testX = 0;
         let testY = 0;
 
-        if (fromRect.x + fromRect.width < testRect.x) {
-            fromX = fromRect.x + fromRect.width;
+        if (fromRect.right < testRect.left) {
+            fromX = fromRect.right;
         }
-        else if (testRect.x + testRect.width < fromRect.x) {
-            testX = testRect.x + testRect.width
+        else if (testRect.right < fromRect.left) {
+            testX = testRect.right
         }
 
-        if (fromRect.y + fromRect.height < testRect.y) {
-            fromY = fromRect.y + fromRect.height;
+        if (fromRect.bottom < testRect.top) {
+            fromY = fromRect.bottom;
         }
-        else if (testRect.y + testRect.height < fromRect.y) {
-            testY = testRect.y + testRect.height;
+        else if (testRect.bottom < fromRect.top) {
+            testY = testRect.bottom;
         }
 
         if (Math.sqrt(Math.pow(fromX - testX, 2) + Math.pow(fromY - testY, 2)) <= distance) {
@@ -110,10 +110,10 @@ export class Spatial {
     }
 
     isDirection(testRect: PIXI.Rectangle, fromRect: PIXI.Rectangle, dirX: number, dirY: number): boolean {
-        if (dirX === -1 && testRect.x + testRect.width > fromRect.x) return false;
-        if (dirX === 1 && testRect.x < fromRect.x + fromRect.width) return false;
-        if (dirY === -1 && testRect.y + testRect.height > fromRect.y) return false;
-        if (dirY === 1 && testRect.y < fromRect.y + fromRect.height) return false;
+        if (dirX === -1 && testRect.right > fromRect.left) return false;
+        if (dirX === 1 && testRect.left < fromRect.right) return false;
+        if (dirY === -1 && testRect.bottom > fromRect.top) return false;
+        if (dirY === 1 && testRect.top < fromRect.bottom) return false;
 
         return true;
     }
@@ -195,7 +195,7 @@ export class Spatial {
             queryRect.width = rect.x - bounds.min.x;
         }
         else if (dirX === 1) {
-            queryRect.x = rect.x + rect.width;
+            queryRect.x = rect.right;
             queryRect.width = bounds.max.x - queryRect.x;
         }
         else {
@@ -208,7 +208,7 @@ export class Spatial {
             queryRect.height = rect.y - bounds.min.y;
         }
         else if (dirY === 1) {
-            queryRect.y = rect.y + rect.height;
+            queryRect.y = rect.bottom;
             queryRect.height = bounds.max.y - queryRect.y;
         }
         else {

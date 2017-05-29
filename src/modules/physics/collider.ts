@@ -20,8 +20,8 @@ export class TilemapCollider {
 
     getTilesInRect(rect: PIXI.Rectangle): TileMap {
         let tiles = [];
-        for (let y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
-            for (let x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
+        for (let y = rect.top; y < rect.bottom; y += 8) {
+            for (let x = rect.left; x < rect.right; x += 8) {
                 tiles.push(this.getTile(x / 8, y / 8));
             }
         }
@@ -30,8 +30,8 @@ export class TilemapCollider {
     }
 
     anyTileInRect(rect: PIXI.Rectangle): boolean {
-        for (let y = rect.y, endY = rect.y + rect.height; y < endY; y += 8) {
-            for (let x = rect.x, endX = rect.x + rect.width; x < endX; x += 8) {
+        for (let y = rect.top; y < rect.bottom; y += 8) {
+            for (let x = rect.left; x < rect.right; x += 8) {
                 let tile = this.getTile(x / 8, y / 8);
                 if (tile !== 0) {
                     return true;

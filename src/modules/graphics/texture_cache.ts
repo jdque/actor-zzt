@@ -39,8 +39,8 @@ export class TextureCache {
         };
     }
 
-    getNextCoord(width: number, height: number): {x: number, y: number} {
-        function traverse(node: TreeNode, depth: number): {x: number, y: number} {
+    getNextCoord(width: number, height: number): PIXI.Point {
+        function traverse(node: TreeNode, depth: number): PIXI.Point {
             if (!node.left && !node.right) { //is leaf
                 if (node.used || width > node.rect.width || height > node.rect.height) { //is occupied or doesn't fit
                     return null;
@@ -83,7 +83,7 @@ export class TextureCache {
                     right: null
                 }
 
-                return {x: node.rect.x, y: node.rect.y};
+                return new PIXI.Point(node.rect.x, node.rect.y);
             }
             else { //is branch
                 let coord = null;

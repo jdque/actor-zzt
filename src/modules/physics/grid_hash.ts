@@ -27,11 +27,7 @@ export class GridHash implements IFinder {
 
         this.objIdCellMap[object.id] = [];
 
-        let bounds = this.getObjectBounds(object);
-        let left: number   = bounds.x;
-        let right: number  = bounds.x + bounds.width;
-        let top: number    = bounds.y;
-        let bottom: number = bounds.y + bounds.height;
+        let {left, right, top, bottom} = this.getObjectBounds(object);
 
         //Insert corner points
         this.addObjectForPoint(object, left, top);
@@ -58,8 +54,8 @@ export class GridHash implements IFinder {
             return;
         }
 
-        for (let i = 0; i < this.objIdCellMap[object.id].length; i++) {
-            let cell = this.cells[this.objIdCellMap[object.id][i]];
+        for (let cellKey of this.objIdCellMap[object.id]) {
+            let cell = this.cells[cellKey];
             cell[cell.indexOf(object)] = cell[cell.length - 1];
             cell.pop();
         }
@@ -71,13 +67,13 @@ export class GridHash implements IFinder {
             return;
         }
 
-        let bounds = this.getObjectBounds(object);
+        let {left, right, top, bottom} = this.getObjectBounds(object);
 
         //If object corner points are in the same cells as before, no need to update
-        if (this.objIdCellMap[object.id].indexOf(this.getKey(bounds.x, bounds.y)) > -1 &&
-            this.objIdCellMap[object.id].indexOf(this.getKey(bounds.x + bounds.width, bounds.y)) > -1 &&
-            this.objIdCellMap[object.id].indexOf(this.getKey(bounds.x, bounds.y + bounds.height)) > -1 &&
-            this.objIdCellMap[object.id].indexOf(this.getKey(bounds.x + bounds.width, bounds.y + bounds.height)) > -1) {
+        if (this.objIdCellMap[object.id].indexOf(this.getKey(left, top)) > -1 &&
+            this.objIdCellMap[object.id].indexOf(this.getKey(right, top)) > -1 &&
+            this.objIdCellMap[object.id].indexOf(this.getKey(left, bottom)) > -1 &&
+            this.objIdCellMap[object.id].indexOf(this.getKey(right, bottom)) > -1) {
             return;
         }
 
@@ -116,9 +112,9 @@ export class GridHash implements IFinder {
         for (let iy = cellY; iy <= cellY + cellH; iy++) {
             for (let ix = cellX; ix <= cellX + cellW; ix++) {
                 let cellObjs = this.getCellObjects(ix + "," + iy);
-                for (let i = 0; i < cellObjs.length; i++) {
-                    if (objects.indexOf(cellObjs[i]) === -1) {
-                        objects.push(cellObjs[i]);
+                for (let cellObj of cellObjs) {
+                    if (objects.indexOf(cellObj) === -1) {
+                        objects.push(cellObj);
                     }
                 }
             }
