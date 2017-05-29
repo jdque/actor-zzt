@@ -263,13 +263,13 @@ function onResourcesLoaded() {
     world.addBoard("Default", board);
     world.startBoard("Default");
 
-    requestAnimFrame(update);
+    requestAnimationFrame(update);
 }
 
 function update() {
     world.step();
     renderer.render(stage);
-    requestAnimFrame(update);
+    requestAnimationFrame(update);
 }
 
 window.onload = function () {

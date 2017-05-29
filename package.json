@@ -8,12 +8,12 @@
     "build": "node build.js"
   },
   "devDependencies": {
+    "jasmine": "2.3.2",
     "systemjs": "0.19.*",
-    "systemjs-builder": "0.15.*",
-    "jasmine": "2.3.2"
+    "systemjs-builder": "0.15.*"
   },
   "dependencies": {
-    "pixi": "2.2.9"
+    "pixi.js": "^4.5.2"
   },
   "author": "",
   "license": "ISC"
