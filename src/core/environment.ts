@@ -216,8 +216,8 @@ export class Board extends Entity {
         this.depth = 0;
         this.parent = null;
 
-        let {labelStore, blockStore} = this.parser.parseStores(this);
-        let {commands, moduleData} = this.parser.parseCommands(this);
+        let {labelStore, blockStore} = this.parser.parseScript(this);
+        let {commands, moduleData} = this.parser.parseAdoptions(this);
         this.execContext = {
             entity: this,
             commands: commands,
@@ -295,7 +295,7 @@ export class Board extends Entity {
             throw "Bad object definition";
         }
 
-        let {labelStore, blockStore} = this.parser.parseStores(obj);
+        let {labelStore, blockStore} = this.parser.parseScript(obj);
         obj.execContext = {
             entity: obj,
             commands: {},
@@ -325,7 +325,7 @@ export class Board extends Entity {
         let prototype = this.prototypes[name];
         let instance = Entity.clone(prototype);
         let {labelStore, blockStore} = prototype.execContext;
-        let {commands, moduleData} = this.parser.parseCommands(instance);
+        let {commands, moduleData} = this.parser.parseAdoptions(instance);
         instance.depth = parent ? parent.depth + 1 : 0;
         instance.parent = parent || instance;
         instance.execContext = {

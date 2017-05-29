@@ -154,7 +154,7 @@ export class Parser implements IParseState {
         };
     }
 
-    parseStores(entity: Entity): {labelStore: LabelStore, blockStore: BlockStore} {
+    parseScript(entity: Entity): {labelStore: LabelStore, blockStore: BlockStore} {
         this.resetState();
 
         let paramsStr = '["' + entity.initParams.join('","') + '"]';
@@ -173,7 +173,7 @@ export class Parser implements IParseState {
         };
     }
 
-    parseCommands(entity: Entity): {commands: CommandTree, moduleData: ModuleData} {
+    parseAdoptions(entity: Entity): {commands: CommandTree, moduleData: ModuleData} {
         let runCommands: CommandTree = {};
         let moduleData: ModuleData = {};
 
