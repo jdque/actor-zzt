@@ -107,7 +107,7 @@ export class Entity {
     clearFrameStack(): void {
         this.execState.currentLabelFrame = null;
         this.execState.currentFrame = null;
-        this.execState.frameStack = [];
+        Util.clearArray(this.execState.frameStack);
     }
 
     addAdoption(moduleName: string, initParams: {[key: string]: any}): void {
@@ -130,8 +130,8 @@ export class Entity {
         this.adoptions = {};
     }
 
-    data(moduleName: string): ModuleData {
-        return this.execState.moduleData[moduleName];
+    data(): ModuleData {
+        return this.execState.moduleData;
     }
 }
 

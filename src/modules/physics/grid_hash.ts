@@ -27,7 +27,7 @@ export class GridHash implements IFinder {
 
         this.objIdCellMap[object.id] = [];
 
-        let {left, right, top, bottom} = this.getObjectBounds(object);
+        let {left, right, top, bottom} = object.data().body.bounds;
 
         //Insert corner points
         this.addObjectForPoint(object, left, top);
@@ -67,7 +67,7 @@ export class GridHash implements IFinder {
             return;
         }
 
-        let {left, right, top, bottom} = this.getObjectBounds(object);
+        let {left, right, top, bottom} = object.data().body.bounds;
 
         //If object corner points are in the same cells as before, no need to update
         if (this.objIdCellMap[object.id].indexOf(this.getKey(left, top)) > -1 &&
@@ -94,11 +94,7 @@ export class GridHash implements IFinder {
         }
     }
 
-    getObjectBounds(object: Entity): PIXI.Rectangle {
-        return object.data('body').bounds;
-    }
-
-    getGlobalBounds(): Bounds {
+    getBounds(): Bounds {
         return this.bounds;
     }
 

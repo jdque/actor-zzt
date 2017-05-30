@@ -1,6 +1,6 @@
 import {isEvaluable, IEvaluable, DeferredFunction, Expression} from '../../core/evaluables';
 import {Entity} from '../../core/environment';
-import {ModuleBuilder} from '../../core/module';
+import {ModuleBuilder, ModuleData} from '../../core/module';
 
 interface InitParams {};
 
@@ -8,6 +8,12 @@ interface Data {
     downKeys: number[];
     handlers: {[key: string]: (e: Event) => any};
 };
+
+declare module '../../core/module' {
+    interface ModuleData {
+        input: Data;
+    }
+}
 
 let builder = new ModuleBuilder();
 
@@ -52,7 +58,7 @@ builder
         compile: (parser) => (keyCode: number | IEvaluable<number>): IEvaluable<boolean> => {
             return new DeferredFunction((entity): boolean => {
                 let evalKeyCode = isEvaluable(keyCode) ? keyCode.evaluate(entity) : keyCode;
-                return entity.data('input').downKeys.indexOf(evalKeyCode) !== -1;
+                return entity.data().input.downKeys.indexOf(evalKeyCode) !== -1;
             });
         },
         run: null

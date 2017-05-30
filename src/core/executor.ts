@@ -1,3 +1,4 @@
+import {Util} from './util';
 import {Type, TSimpleOp, TEnterOp, TExitOp, TJumpOp, TIfOp, TLoopOp, TAnyOp} from './ops';
 import {BlockStore, LabelStore, LabelOffsets} from './blocks';
 import {IEvaluable, isEvaluable} from './evaluables';
@@ -15,9 +16,9 @@ type CommandTree = {[name: string]: CommandTree} | Function;
 type VariableSet = {[name: string]: any};
 
 interface IFrame {
-    blockId: string;
+    readonly blockId: string;
     offset: number;
-    variables: VariableSet;
+    readonly variables: VariableSet;
 };
 
 export interface IExecutionContext {
@@ -30,9 +31,9 @@ export interface IExecutionContext {
 export interface IExecutionState {
     currentLabelFrame: IFrame;
     currentFrame: IFrame;
-    frameStack: IFrame[];
-    labelOffsets: LabelOffsets;
-    moduleData: ModuleData;
+    readonly frameStack: IFrame[];
+    readonly labelOffsets: LabelOffsets;
+    readonly moduleData: ModuleData;
 }
 
 export class Executor {
@@ -47,7 +48,7 @@ export class Executor {
     private setCurrentFrame(blockId: string, offset: number): void {
         if (this.state.currentFrame && blockId === this.state.currentFrame.blockId) {
             this.state.currentFrame.offset = offset;
-            this.state.currentFrame.variables = {};
+            Util.clearObject(this.state.currentFrame.variables);
         } else {
             this.state.currentFrame = {
                 blockId: blockId,
@@ -69,7 +70,7 @@ export class Executor {
     private clearFrameStack(): void {
         this.state.currentLabelFrame = null;
         this.state.currentFrame = null;
-        this.state.frameStack = [];
+        Util.clearArray(this.state.frameStack);
     }
 
     private execSimpleOp(op: TSimpleOp): void {

@@ -1,4 +1,4 @@
-import {ModuleBuilder} from '../../core/module';
+import {ModuleBuilder, ModuleData} from '../../core/module';
 
 interface InitParams {
     element: HTMLElement;
@@ -7,6 +7,12 @@ interface InitParams {
 interface Data {
     element: HTMLElement;
 };
+
+declare module '../../core/module' {
+    interface ModuleData {
+        html: Data;
+    }
+}
 
 let builder = new ModuleBuilder();
 

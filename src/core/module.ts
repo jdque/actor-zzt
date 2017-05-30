@@ -2,9 +2,11 @@ import {Parser} from './parser';
 import {Entity} from './environment';
 
 interface CompileFunc { (parser: Parser): Function };
-interface RunFunc { (entity: Entity, data?: ModuleData) : Function };
+interface RunFunc { (entity: Entity, data?: any) : Function };
 
-export type ModuleData = {[moduleName: string]: ModuleData} | any;
+export interface ModuleData {
+    [moduleName: string]: any;
+}
 
 export interface ICommand {
     name: string;
@@ -14,18 +16,18 @@ export interface ICommand {
 
 export interface IModule {
     name: string;
-    data: ModuleData;
+    data: any;
     compileCommands: {[name: string]: CompileFunc};
     runCommands: {[name: string]: RunFunc};
 }
 
 class Module implements IModule {
     name: string;
-    data: ModuleData;
+    data: any;
     compileCommands: {[name: string]: CompileFunc};
     runCommands: {[name: string]: RunFunc};
 
-    constructor(name: string, data: ModuleData, commands: ICommand[]) {
+    constructor(name: string, data: any, commands: ICommand[]) {
         this.name = name;
         this.data = data;
         this.compileCommands = {};
@@ -44,7 +46,7 @@ class Module implements IModule {
 
 export class ModuleBuilder {
     private commandMap: {[name: string]: ICommand};
-    private dataObj: ModuleData;
+    private dataObj: any;
 
     constructor() {
         this.commandMap = {};
@@ -56,7 +58,7 @@ export class ModuleBuilder {
         return this;
     }
 
-    data(data: ModuleData): ModuleBuilder {
+    data(data: any): ModuleBuilder {
         this.dataObj = data;
         return this;
     }

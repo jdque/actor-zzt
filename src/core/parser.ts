@@ -175,12 +175,12 @@ export class Parser implements IParseState {
 
     parseAdoptions(entity: Entity): {commands: CommandTree, moduleData: ModuleData} {
         let runCommands: CommandTree = {};
-        let moduleData: ModuleData = {};
+        let moduleData = <ModuleData>{};
 
         for (let module of this.modules) {
             let namespace = module.name || "";
 
-            let data: ModuleData = {};
+            let data = <ModuleData>{};
             for (let key in module.data) {
                 data[key] = module.data[key];
             }

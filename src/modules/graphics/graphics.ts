@@ -1,6 +1,6 @@
 import {Tile, TileSprite, TilePalette} from './tile';
 import {TextureCache} from './texture_cache';
-import {ModuleBuilder} from '../../core/module';
+import {ModuleBuilder, ModuleData} from '../../core/module';
 
 interface InitParams {
     stage: PIXI.Container;
@@ -13,8 +13,14 @@ interface InitParams {
 };
 
 interface Data {
-    pixiObject: any;
+    pixiObject: TileSprite;
 };
+
+declare module '../../core/module' {
+    interface ModuleData {
+        pixi: Data;
+    }
+}
 
 let builder = new ModuleBuilder();
 
@@ -29,8 +35,8 @@ builder
 
             data.pixiObject = obj;
 
-            if (entity.parent && entity.parent.data('pixi').pixiObject) {
-                entity.parent.data('pixi').pixiObject.addChild(obj);
+            if (entity.parent && entity.parent.data().pixi.pixiObject) {
+                entity.parent.data().pixi.pixiObject.addChild(obj);
             } else {
                 params.stage.addChild(obj);
             }

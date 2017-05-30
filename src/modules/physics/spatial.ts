@@ -21,8 +21,7 @@ export interface IFinder {
     removeObject: (object: Entity) => void;
     updateObject: (object: Entity) => void;
     getNearbyObjects: (x: number, y: number, width: number, height: number) => Entity[];
-    getObjectBounds: (object: Entity) => PIXI.Rectangle;
-    getGlobalBounds: () => Bounds;
+    getBounds: () => Bounds;
 };
 
 export class Spatial {
@@ -128,7 +127,7 @@ export class Spatial {
 
         let objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
         for (let i = objs.length - 1; i >= 0; i--) {
-            if (!this.isIntersect(objs[i].data('body').bounds, rect) || objs[i] === excludeObject) {
+            if (!this.isIntersect(objs[i].data().body.bounds, rect) || objs[i] === excludeObject) {
                 objs[i] = objs[objs.length - 1];
                 objs.pop();
             }
@@ -146,7 +145,7 @@ export class Spatial {
 
         let objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
         for (let i = objs.length - 1; i >= 0; i--) {
-            if (this.isIntersect(objs[i].data('body').bounds, rect) && objs[i] !== excludeObject) {
+            if (this.isIntersect(objs[i].data().body.bounds, rect) && objs[i] !== excludeObject) {
                 return true;
             }
         }
@@ -163,7 +162,7 @@ export class Spatial {
 
         let objs = this.finder.getNearbyObjects(rect.x, rect.y, rect.width, rect.height);
         for (let i = objs.length - 1; i >= 0; i--) {
-            if (!this.isInside(objs[i].data('body').bounds, rect)) {
+            if (!this.isInside(objs[i].data().body.bounds, rect)) {
                 objs[i] = objs[objs.length - 1];
                 objs.pop();
             }
@@ -178,7 +177,7 @@ export class Spatial {
     getWithin(rect: PIXI.Rectangle, distance: number): Entity[] {
         let objs = this.finder.getNearbyObjects(rect.x - distance, rect.y - distance, rect.width + distance * 2, rect.height + distance * 2);
         for (let i = objs.length - 1; i >= 0; i--) {
-            if (!this.isWithin(objs[i].data('body').bounds, rect, distance)) {
+            if (!this.isWithin(objs[i].data().body.bounds, rect, distance)) {
                 objs[i] = objs[objs.length - 1];
                 objs.pop();
             }
@@ -189,7 +188,7 @@ export class Spatial {
 
     getDirection(rect: PIXI.Rectangle, dirX: number, dirY: number): Entity[] {
         let queryRect = new PIXI.Rectangle(0, 0, 0, 0);
-        let bounds = this.finder.getGlobalBounds();
+        let bounds = this.finder.getBounds();
         if (dirX === -1) {
             queryRect.x = bounds.min.x;
             queryRect.width = rect.x - bounds.min.x;
@@ -265,7 +264,7 @@ export class Spatial {
                 }
                 else {
                     resultSet = resultSet.filter((obj: Entity) => {
-                        return spatial.isIntersect(obj.data('body').bounds, rect) !== notIsActive;
+                        return spatial.isIntersect(obj.data().body.bounds, rect) !== notIsActive;
                     });
                 }
 
@@ -284,7 +283,7 @@ export class Spatial {
                 }
                 else {
                     resultSet = resultSet.filter((obj: Entity) => {
-                        return spatial.isInside(obj.data('body').bounds, rect) !== notIsActive;
+                        return spatial.isInside(obj.data().body.bounds, rect) !== notIsActive;
                     });
                 }
 
@@ -303,7 +302,7 @@ export class Spatial {
                 }
                 else {
                     resultSet = resultSet.filter((obj: Entity) => {
-                        return spatial.isWithin(obj.data('body').bounds, fromRect, distance) !== notIsActive;
+                        return spatial.isWithin(obj.data().body.bounds, fromRect, distance) !== notIsActive;
                     });
                 }
 
@@ -322,7 +321,7 @@ export class Spatial {
                 }
                 else {
                     resultSet = resultSet.filter((obj: Entity) => {
-                        return spatial.isDirection(obj.data('body').bounds, fromRect, dirX, dirY) !== notIsActive;
+                        return spatial.isDirection(obj.data().body.bounds, fromRect, dirX, dirY) !== notIsActive;
                     });
                 }
 

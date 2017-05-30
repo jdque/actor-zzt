@@ -24,6 +24,12 @@ interface Delta {
     dy: number;
 }
 
+declare module '../../core/module' {
+    interface ModuleData {
+        body: Data;
+    }
+}
+
 function getDirectionDelta(dirStr: string, entity: Entity): Delta {
     var dx = 0;
     var dy = 0;
@@ -49,7 +55,7 @@ function getDirectionDelta(dirStr: string, entity: Entity): Delta {
             else                { dx = 8;  }
             break;
         case 'flow':
-            var lastDelta = (<Data>entity.data('body')).lastDelta;
+            var lastDelta = entity.data().body.lastDelta;
             dx = lastDelta.dx;
             dy = lastDelta.dy;
             break;
@@ -70,8 +76,8 @@ builder
             data.tilemap = new TilemapCollider(params.tiles, params.width, params.height),
             data.lastDelta = {dx: 0, dy: 0}
 
-            if (entity.parent && entity.parent.data('body')) {
-                entity.parent.data('body').spatial.register(entity);
+            if (entity.parent && entity.parent.data().body) {
+                entity.parent.data().body.spatial.register(entity);
             }
         }
     })
@@ -79,8 +85,8 @@ builder
         name: '__destroy__',
         compile: null,
         run: (entity, data: Data) => () => {
-            if (entity.parent && entity.parent.data('body')) {
-                entity.parent.data('body').spatial.unregister(entity);
+            if (entity.parent && entity.parent.data().body) {
+                entity.parent.data().body.spatial.unregister(entity);
             }
             data.bounds = null;
             data.spatial = null;
@@ -92,7 +98,7 @@ builder
         name: 'blocked',
         compile: (parser) => (dir: string): DeferredFunction => {
             return new DeferredFunction((entity): boolean => {
-                let data: Data = entity.data('body');
+                let data: Data = entity.data().body;
 
                 var blocked = false;
                 var delta = getDirectionDelta(dir, entity);
@@ -100,10 +106,10 @@ builder
                 data.bounds.x += delta.dx;
                 data.bounds.y += delta.dy;
 
-                if (entity.parent.data('body').spatial.anyIntersect(data.bounds, 0, 0, entity)) {
+                if (entity.parent.data().body.spatial.anyIntersect(data.bounds, 0, 0, entity)) {
                     blocked = true;
                 }
-                else if (entity.parent.data('body').tilemap.anyTileInRect(data.bounds)) {
+                else if (entity.parent.data().body.tilemap.anyTileInRect(data.bounds)) {
                     blocked = true;
                 }
 
@@ -119,10 +125,10 @@ builder
         name: 'dir',
         compile: (parser) => (dir: string): DeferredFunction => {
             return new DeferredFunction((entity): Entity[] => {
-                let data: Data = entity.data('body');
+                let data: Data = entity.data().body;
 
                 var delta = getDirectionDelta(dir, entity);
-                var objs = entity.parent.data('body').spatial.query()
+                var objs = entity.parent.data().body.spatial.query()
                     .distance(data.bounds, 1)
                     .direction(data.bounds, delta.dx / 8, delta.dy / 8)
                     .get();
@@ -140,11 +146,11 @@ builder
 
             data.bounds.x = x;
             data.bounds.y = y;
-            entity.parent.data('body').spatial.update(entity);
+            entity.parent.data().body.spatial.update(entity);
 
-            if (entity.data('pixi').pixiObject) {
-                entity.data('pixi').pixiObject.position.x = data.bounds.x;
-                entity.data('pixi').pixiObject.position.y = data.bounds.y;
+            if (entity.data().pixi.pixiObject) {
+                entity.data().pixi.pixiObject.position.x = data.bounds.x;
+                entity.data().pixi.pixiObject.position.y = data.bounds.y;
             }
         }
     })
@@ -158,20 +164,20 @@ builder
             data.bounds.x += dx;
             data.bounds.y += dy;
 
-            if (entity.parent.data('body').spatial.anyIntersect(data.bounds, 0, 0, entity)) {
+            if (entity.parent.data().body.spatial.anyIntersect(data.bounds, 0, 0, entity)) {
                 data.bounds.x -= dx;
                 data.bounds.y -= dy;
             }
-            else if (entity.parent.data('body').tilemap.anyTileInRect(data.bounds)) {
+            else if (entity.parent.data().body.tilemap.anyTileInRect(data.bounds)) {
                 data.bounds.x -= dx;
                 data.bounds.y -= dy;
             }
 
-            entity.parent.data('body').spatial.update(entity);
+            entity.parent.data().body.spatial.update(entity);
 
-            if (entity.data('pixi').pixiObject) {
-                entity.data('pixi').pixiObject.position.x = data.bounds.x;
-                entity.data('pixi').pixiObject.position.y = data.bounds.y;
+            if (entity.data().pixi.pixiObject) {
+                entity.data().pixi.pixiObject.position.x = data.bounds.x;
+                entity.data().pixi.pixiObject.position.y = data.bounds.y;
             }
         }
     })

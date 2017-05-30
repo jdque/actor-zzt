@@ -34,4 +34,14 @@ export class Util {
         }
         return destination;
     }
+
+    static clearArray(arr: any[]): void {
+        arr.length = 0;
+    }
+
+    static clearObject(obj: {[key: string]: any}): void {
+        for (let key in obj) {
+            delete obj[key];
+        }
+    }
 }
