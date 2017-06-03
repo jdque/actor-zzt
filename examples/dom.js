@@ -42,7 +42,7 @@ function run() {
             end()
 
             label('showpictures')
-                send('[self].[all]', 'die')
+                send('children', 'die')
                 html.exec(function (elem) {
                     elem.innerHTML = "Here is an image<br /><br />";
                 })
@@ -71,7 +71,7 @@ function run() {
             end()
 
             label('@click')
-                send('[parent]', 'create_image')
+                send('parent', 'create_image')
             end()
 
             label('die')
@@ -107,7 +107,7 @@ function run() {
                 wait(2)
                 html.exec(function (elem) { elem.height = 240; })
                 wait(4)
-                send('[parent]', 'squawk')
+                send('parent', 'squawk')
             end()
 
             label('die')

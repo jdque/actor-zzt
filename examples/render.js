@@ -163,13 +163,13 @@ function onResourcesLoaded() {
 
                 _if(input.key_down(32))
                     _if('$dir === "e"')
-                        send('[parent]', 'shoot', [expr('this.data().body.bounds.right'), expr('this.data().body.bounds.top'), "e"])
+                        send('parent', 'shoot', [expr('this.data().body.bounds.right'), expr('this.data().body.bounds.top'), "e"])
                     _elif('$dir === "w"')
-                        send('[parent]', 'shoot', [expr('this.data().body.bounds.left - 8'), expr('this.data().body.bounds.top'), "w"])
+                        send('parent', 'shoot', [expr('this.data().body.bounds.left - 8'), expr('this.data().body.bounds.top'), "w"])
                     _elif('$dir === "n"')
-                        send('[parent]', 'shoot', [expr('this.data().body.bounds.left'), expr('this.data().body.bounds.top - 8'), "n"])
+                        send('parent', 'shoot', [expr('this.data().body.bounds.left'), expr('this.data().body.bounds.top - 8'), "n"])
                     _elif('$dir === "s"')
-                        send('[parent]', 'shoot', [expr('this.data().body.bounds.left'), expr('this.data().body.bounds.bottom'), "s"])
+                        send('parent', 'shoot', [expr('this.data().body.bounds.left'), expr('this.data().body.bounds.bottom'), "s"])
                     _endif()
                     wait(5)
                 _endif()
@@ -206,7 +206,6 @@ function onResourcesLoaded() {
 
         object('Bullet', function () {
             label('init', ['x', 'y', 'dir'])
-                print(expr('$_x'))
                 adopt('body', entities.bullet.body)
                 adopt('pixi', entities.bullet.sprite)
                 body.move_to($('x'), $('y'))
@@ -251,11 +250,6 @@ function onResourcesLoaded() {
         label('shoot', ['x', 'y', 'dir'])
             //spawn('Bullet', $(['x', 'y', 'dir']))
             spawn('Bullet', [$('x'), $('y'), $('dir')])
-            /*spawn('Bullet', [
-                expr('Math.floor(Math.random() * 640 / 8) * 8'),
-                expr('Math.floor(Math.random() * 480 / 8) * 8'),
-                "e"
-            ])*/
         end()
     });
 

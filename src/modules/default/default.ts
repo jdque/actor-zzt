@@ -1,5 +1,6 @@
 import * as Ops from '../../core/ops';
-import {isEvaluable, IEvaluable, ArrayValue, DeferredFunction, Expression, Scope, Value} from '../../core/evaluables';
+import {isEvaluable, IEvaluable, ArrayValue, DeferredFunction, Expression, Value} from '../../core/evaluables';
+import {Scope} from '../../core/scope';
 import {Entity} from '../../core/environment';
 import {ModuleBuilder} from '../../core/module';
 
@@ -275,7 +276,7 @@ builder
     .command({
         name: 'spawn',
         compile: (parser) => parser.simpleCommand('spawn'),
-        run: (entity) => (objName: string, initArgs: any[]) => {
+        run: (entity) => (objName: string, initArgs: any[] = []) => {
             //TODO handle if initArgs is ArrayValue
             var evaluatedArgs = [];
             for (let arg of initArgs) {

@@ -435,6 +435,16 @@ export class Board extends Entity {
         return this.groupStore.get(groupName).getEntities();
     }
 
+    isObjectInGroup(entity: Entity, groupName: string): boolean {
+        //TODO - replace with entity.groups.indexOf(groupName) >= 0;
+        if (!this.groupStore.hasGroup(groupName)) {
+            return null;
+        }
+
+        let entities = this.groupStore.get(groupName).getEntities();
+        return entities.indexOf(entity) >= 0;
+    }
+
     terminate(): void {
         this.terminated = true;
     }

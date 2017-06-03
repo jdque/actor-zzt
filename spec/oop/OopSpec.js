@@ -1,5 +1,5 @@
 describe("Oop", function () {
-	var ZZT = require("../../tsout/index.js");
+	var ZZT = require("../../tsout/index_debug.js");
 	var board;
 
 	var DefaultParser = new ZZT.Parser();
@@ -467,19 +467,25 @@ describe("Oop", function () {
 					end()
 				});
 				object('ObjectB', function () {
-					print('B')
-					send('[self].[parent].ObjectA', 'do')
+					end()
+					label('do')
+						print('B')
+					end()
+				});
+				object('ObjectC', function () {
+					send('ObjectA', 'do')
 					wait(1)
 					terminate()
-				});
+				})
 			});
 			board.run(function () {
 				spawn('ObjectA')
 				spawn('ObjectA')
 				spawn('ObjectB')
+				spawn('ObjectC')
 			});
 			board.finish(function () {
-				expect(console.history.toString()).toEqual(['B', 'A', 'A'].toString())
+				expect(console.history.toString()).toEqual(['A', 'A'].toString())
 				done();
 			});
 			board.start();
@@ -488,7 +494,7 @@ describe("Oop", function () {
 		it("should allow objects to send messages to itself", function (done) {
 			board.setup(function () {
 				object('Player', function () {
-					send('[self]', 'do')
+					send('self', 'do')
 					end()
 					label('do')
 						print(1)
@@ -498,7 +504,7 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Player')
 				wait(1)
-				send('[board]', 'do')
+				send('board', 'do')
 				end()
 				label('do')
 					print(2)
@@ -578,7 +584,7 @@ describe("Oop", function () {
 			board.setup(function () {
 				object('Parent', function () {
 					spawn('Child')
-					send('[self].Child', 'do')
+					send('children[name=Child]', 'do')
 					end()
 					label('done')
 						print('B')
@@ -588,18 +594,18 @@ describe("Oop", function () {
 					end()
 					label('do')
 						spawn('Zygote')
-						send('[self].Zygote', 'do2')
+						send('children[name=Zygote]', 'do2')
 					end()
 				});
 				object('Zygote', function () {
 					end()
 					label('do2')
 						spawn('Zygote')
-						send('[self].Zygote', 'do3')
+						send('children[name=Zygote]', 'do3')
 					end()
 					label('do3')
 						print('A')
-						send('[parent].[parent].[parent]', 'done')
+						send('parent/parent/parent', 'done')
 					end()
 				});
 			});
@@ -616,7 +622,7 @@ describe("Oop", function () {
 		it("should spawn nested (child) entities using tree builder command", function (done) {
 			board.setup(function () {
 				object('Parent', function () {
-					send('[self].Child', 'do')
+					send('children[name=Child]', 'do')
 					end()
 					label('done')
 						print('B')
@@ -625,17 +631,17 @@ describe("Oop", function () {
 				object('Child', function () {
 					end()
 					label('do')
-						send('[self].Zygote', 'do2')
+						send('children[name=Zygote]', 'do2')
 					end()
 				});
 				object('Zygote', function () {
 					end()
 					label('do2')
-						send('[self].Zygote', 'do3')
+						send('children[name=Zygote]', 'do3')
 					end()
 					label('do3')
 						print('A')
-						send('[parent].[parent].[parent]', 'done')
+						send('parent/parent/parent', 'done')
 					end()
 				});
 			});
@@ -671,7 +677,7 @@ describe("Oop", function () {
 					end()
 					label('respond')
 						print('A')
-						send('[self].Zygote', 'respond')
+						send('children[name=Zygote]', 'respond')
 					end()
 				});
 				object('Zygote', function () {
@@ -684,9 +690,11 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Parent')
 				wait(1)
-				send('[self].Parent', 'delete')
+				//send('siblings[body.touches = left, name = Enemy]/children[role = Health]')
+				//send('children/body.inside=0,0,10,20/')
+				send('children[name=Parent]', 'delete')
 				wait(1)
-				send('[self].Parent.Child', 'respond')
+				send('children[name=Parent]/children[name=Child]', 'respond')
 				wait(3)
 				terminate()
 			});
@@ -714,9 +722,9 @@ describe("Oop", function () {
 					terminate()
 				});
 				object('Child', function () {
-					send('[parent]', 'morph')
+					send('parent', 'morph')
 					wait(2)
-					send('[parent]', 'howl')
+					send('parent', 'howl')
 				});
 			});
 			board.run(function () {
@@ -776,17 +784,17 @@ describe("Oop", function () {
 				});
 				object('BA', function () {
 					wait(1)
-					send('$.*.AA.<', 'A_do')		//All board entities that have AA as a child
+					send('^/*/AA/<', 'A_do')		//All board entities that have AA as a child
 					wait(1)
-					send('<.<.<.<.<.*', 'B_do')		//Board's parent should scope to itself
+					send('</</</</</*', 'B_do')		//Board's parent should scope to itself
 					wait(1)
-					send('<.BA.<.<.B', 'B_do')		//Self-scoping
+					send('</BA/</</B', 'B_do')		//Self-scoping
 					wait(1)
-					send('<.<.A.*', 'AA_do')		//Send to all instances for a name scope
+					send('</</A/*', 'AA_do')		//Send to all instances for a name scope
 					wait(1)
-					send('<.<.A.AB.ABA', 'ABA_do')	//Chained name scopes
+					send('</</A/AB/ABA', 'ABA_do')	//Chained name scopes
 					wait(1)
-					send('<.<.A.AB.<>', 'AA_do')    //Siblings
+					send('</</A/AB/<>', 'AA_do')	//Siblings
 					wait(1)
 					terminate()
 				});
@@ -832,13 +840,13 @@ describe("Oop", function () {
 				spawn('A1')
 				spawn('B1')
 				wait(2)
-				send('GroupB', 'do')
+				send('group=GroupB', 'do')
 				wait(2)
-				send('GroupA', 'do')
+				send('group=GroupA', 'do')
 				wait(2)
-				send('GroupB', 'do')
+				send('group=GroupB', 'do')
 				wait(2)
-				send('GroupC', 'do')
+				send('group=GroupC', 'do')
 				end()
 				label('do')
 					print('C1')
