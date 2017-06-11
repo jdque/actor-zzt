@@ -29,8 +29,8 @@ const fParent   = "res = _first(res, function (e) { return parent(e); });\n";
 const fChildren = "res = _flatMap(res, function (e) { return children(e); });\n";
 const fSiblings = "res = _flatMap(res, function (e) { return siblings(e); });\n";
 //filters
-const fName     = "res = _filter(res, function (e) { return name(e, '{entityName}'); });\n";
-const fGroup    = "res = _filter(res, function (e) { return group(e, '{groupName}'); });\n";
+const fName     = "res = _filter(res, function (e) { return name(e, {entityName}); });\n";
+const fGroup    = "res = _filter(res, function (e) { return group(e, {groupName}); });\n";
 
 function board(entity: Entity): Entity {
     return entity.board;
@@ -59,17 +59,15 @@ function group(entity: Entity, groupName: string): boolean {
     return entity.board.isObjectInGroup(entity, groupName);
 }
 
+export type ScopePart = [string, {[filter: string]: any}] | string;
+
 export class Scope implements IEvaluable<Entity[]> {
     private scopeFunc: Function;
 
-    /*
-     *  scope format: "part1/part2/part3/..."
-     *  part format: "selector[filter1=value1,filter2=value2,...]"
-     */
-    constructor(scope: string) {
-        let scopeParts = scope.replace(/ /g, '').split('/');
+    constructor(scope: ScopePart[] | string) {
+        let scopeArray = typeof scope === 'string' ? this.toScopeArray(scope) : scope;
 
-        let query = _flatMap(scopeParts, this.parsePart);
+        let query = _flatMap(scopeArray, this.parsePart);
         query.unshift(fStart);
         query.push(fEnd);
 
@@ -77,10 +75,37 @@ export class Scope implements IEvaluable<Entity[]> {
         this.scopeFunc = new Function('entity, _filter, _map, _flatMap, _first, children, parent, siblings, group, name, board', queryStr);
     }
 
-    parsePart(part: string, idx: number): string[] {
-        let query: string[] = [];
+    /*
+     *  scope string format: "part1/part2/part3/..."
+     *  part string format: "selector[filter1=value1,filter2=value2,...]"
+     */
+    toScopeArray(scopeStr: string): ScopePart[] {
+        let parts = scopeStr.replace(/ /g, '').split('/');
+        let scopeArr: ScopePart[] = [];
+        for (let part of parts) {
+            let selector = part.split('[')[0];
+            let filters: {[name: string]: any} = null;
+            let filtersMatch = part.match(/\[(.*?)\]/);
+            if (filtersMatch) {
+                filters = {};
+                for (let filterStr of filtersMatch[1].split(',')) {
+                    let [name, val] = filterStr.split('=');
+                    filters[name] = val;
+                }
+            }
+            scopeArr.push(filters ? [selector, filters] : selector);
+        }
+        return scopeArr;
+    }
 
-        let selector = part.split('[')[0];
+    parsePart(part: ScopePart, idx: number): string[] {
+        let query: string[] = [];
+        let [selector, filters] = part instanceof Array ? part : [part, null];
+
+        if (typeof selector !== 'string') {
+            throw new Error("Invalid selector");
+        }
+
         switch (selector) {
             case 'self':
             case '$':
@@ -109,25 +134,27 @@ export class Scope implements IEvaluable<Entity[]> {
                 } else {
                     query.push(fChildren);
                 }
-                query.push(fName.replace('{entityName}', selector));
+                query.push(fName.replace('{entityName}', `"${selector}"`));
                 break;
         }
 
-        let filtersMatch = part.match(/\[(.*?)\]/);
-        if (filtersMatch) {
-            filtersMatch[1].split(',').forEach((filterStr) => {
-                let [name, val] = filterStr.split('=');
+        if (filters) {
+            for (let name in filters) {
+                let val = filters[name];
+                //TODO - support IEValauble filter values
+                let valStr = `"${val}"`;
                 switch (name) {
                     case 'group':
-                        query.push(fGroup.replace('{groupName}', val));
+                        query.push(fGroup.replace('{groupName}', valStr));
                         break;
                     case 'name':
-                        query.push(fName.replace('{entityName}', val));
+                    case '@':
+                        query.push(fName.replace('{entityName}', valStr));
                         break;
                     default:
                         throw new Error("Invalid scope filter");
                 }
-            });
+            }
         }
 
         return query;

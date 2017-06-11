@@ -1,6 +1,6 @@
 import * as Ops from '../../core/ops';
 import {isEvaluable, IEvaluable, ArrayValue, DeferredFunction, Expression, Value} from '../../core/evaluables';
-import {Scope} from '../../core/scope';
+import {Scope, ScopePart} from '../../core/scope';
 import {Entity} from '../../core/environment';
 import {ModuleBuilder} from '../../core/module';
 
@@ -167,8 +167,9 @@ builder
     })
     .command({
         name: 'send',
-        compile: (parser) => (scope: string | Scope, label: string, args?: any[]) => {
-            var evalScope = typeof scope === 'string' ? new Scope(scope) : scope;
+        compile: (parser) => (scope: string | ScopePart[] | Scope | IEvaluable<Entity[]>, label: string, args?: any[]) => {
+            var evalScope =
+                typeof scope === 'string' || scope instanceof Array ? new Scope(scope) : scope;
             var op = Ops.SimpleOp.create('send', [evalScope, label, args || []]);
             parser.addOp(op);
         },

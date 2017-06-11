@@ -690,11 +690,9 @@ describe("Oop", function () {
 			board.run(function () {
 				spawn('Parent')
 				wait(1)
-				//send('siblings[body.touches = left, name = Enemy]/children[role = Health]')
-				//send('children/body.inside=0,0,10,20/')
-				send('children[name=Parent]', 'delete')
+				send([['children',{'name':'Parent'}]], 'delete')
 				wait(1)
-				send('children[name=Parent]/children[name=Child]', 'respond')
+				send([['children',{'name':'Parent'}],['children',{'name':'Child'}]], 'respond')
 				wait(3)
 				terminate()
 			});
